@@ -62,14 +62,34 @@ class MediusPagAPI:
             # Testando diferentes estruturas de payload para MEDIUS PAG
             amount_in_cents = int(data['amount'] * 100)  # Converter para centavos
             
-            # MEDIUS PAG correct payload structure (amount in centavos + product array)
+            # MEDIUS PAG payload corrigido com campos obrigatórios
             amount_cents = int(data['amount'] * 100)
-            # Payload minimalista para MEDIUS PAG
+            
+            # Payload completo baseado no padrão MEDIUS PAG/owempay.com.br
             payload = {
                 "amount": amount_cents,
                 "description": "Receita de bolo",
-                "paymentMethod": "PIX"
+                "paymentMethod": "PIX",
+                "customer": {
+                    "name": data.get('customer_name', 'Cliente'),
+                    "email": data.get('customer_email', default_email),
+                    "phone": data.get('customer_phone', default_phone),
+                    "cpf": data.get('customer_cpf', '').replace('.', '').replace('-', '') if data.get('customer_cpf') else None
+                },
+                "companyId": "30427d55-e437-4384-88de-6ba84fc74833",
+                "externalId": transaction_id,
+                "products": [
+                    {
+                        "name": "Receita de bolo",
+                        "quantity": 1,
+                        "price": amount_cents
+                    }
+                ]
             }
+            
+            # Remover campos None para evitar erros
+            if payload["customer"]["cpf"] is None:
+                del payload["customer"]["cpf"]
             
             logger.info(f"Enviando transação PIX: {transaction_id}")
             logger.info(f"Valor: R$ {data['amount']:.2f}")
