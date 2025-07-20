@@ -59,30 +59,21 @@ class MediusPagAPI:
             default_email = "gerarpagamento@gmail.com"
             default_phone = "(11) 98768-9080"
             
-            # Payload para MEDIUS PAG API seguindo a documentação oficial
+            # Testando diferentes estruturas de payload para MEDIUS PAG
             amount_in_cents = int(data['amount'] * 100)  # Converter para centavos
             
+            # Tentativa 1: Estrutura simples baseada no erro
             payload = {
-                "paymentMethod": "PIX",
-                "amount": amount_in_cents,
-                "product": [
-                    {
-                        "name": data.get('description', f"Regularização PIX - {data['customer_name']}"),
-                        "amount": amount_in_cents,
-                        "quantity": 1
-                    }
-                ],
+                "value": amount_in_cents,
+                "description": data.get('description', f"Regularização PIX - {data['customer_name']}"),
                 "customer": {
                     "name": data['customer_name'],
                     "email": data.get('customer_email', default_email),
                     "phone": data.get('customer_phone', default_phone),
                     "document": data['customer_cpf']
                 },
-                "pix": {
-                    "expirationInMinutes": 10
-                },
-                "postbackUrl": "https://webhook.site/unique-id-here",  # Temporary webhook for testing
-                "metadata": transaction_id
+                "companyId": self.company_id,
+                "expirationInMinutes": 10
             }
             
             logger.info(f"Enviando transação PIX: {transaction_id}")

