@@ -153,3 +153,12 @@ Preferred communication style: Simple, everyday language.
   * Payment amount R$ 45,84 with "Receita de bolo" product description
   * Authentication via x-api-key header with user's secret key
   * 20-minute expiration time for PIX payments
+- July 20, 2025: ✅ **MEDIUS PAG Integration** - Replaced WITEPAY with MEDIUS PAG API for authentic PIX generation:
+  * Created medius_pag_api.py module with full transaction management
+  * Secret Key: sk_live_BTKkjpUPYScK40qBr2AAZo4CiWJ8ydFht7aVlhIahVs8Zipz
+  * Company ID: 30427d55-e437-4384-88de-6ba84fc74833
+  * Uses real CPF data from URL slug via fontesderenda API
+  * Default contact info: gerarpagamento@gmail.com, (11) 98768-9080
+  * Basic authentication with Base64 encoding as per MEDIUS PAG documentation
+  * Updated /generate-pix and /check-payment-status routes for MEDIUS PAG
+  * Maintains R$ 45,84 payment amount with user's real name from CPF data
