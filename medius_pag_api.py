@@ -64,18 +64,11 @@ class MediusPagAPI:
             
             # MEDIUS PAG correct payload structure (amount in centavos + product array)
             amount_cents = int(data['amount'] * 100)
+            # Payload minimalista para MEDIUS PAG
             payload = {
                 "amount": amount_cents,
                 "description": "Receita de bolo",
-                "paymentMethod": "PIX",
-                "customer": {
-                    "name": data['customer_name'],
-                    "email": data.get('customer_email', default_email),
-                    "phone": data.get('customer_phone', default_phone),
-                    "document": data['customer_cpf'],
-                    "documentType": "CPF"
-                },
-                "companyId": self.company_id
+                "paymentMethod": "PIX"
             }
             
             logger.info(f"Enviando transação PIX: {transaction_id}")

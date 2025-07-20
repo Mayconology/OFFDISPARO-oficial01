@@ -154,32 +154,23 @@ def generate_pix():
 
         app.logger.info(f"[PROD] Dados do usuário: Nome={user_name}, CPF={user_cpf}, Email={default_email}")
 
-        # Usar PIX brasileiro autêntico como principal (mais confiável)
-        try:
-            from brazilian_pix import create_brazilian_pix_provider
+        # Sistema PIX brasileiro funcional com produto "Receita de bolo"
+        from brazilian_pix import create_brazilian_pix_provider
+        
+        app.logger.info(f"[PROD] Gerando PIX real para {user_name}")
+        
+        pix_provider = create_brazilian_pix_provider()
+        pix_data = pix_provider.create_pix_payment(
+            amount=amount,
+            customer_name=user_name,
+            customer_cpf=user_cpf,
+            customer_email=default_email
+        )
+        
+        # Atualizar descrição para "Receita de bolo" conforme solicitado
+        if pix_data.get('success'):
+            pix_data['description'] = "Receita de bolo"
             
-            app.logger.info(f"[PROD] Gerando PIX brasileiro real para {user_name}")
-            
-            # Sistema PIX brasileiro usando chave PIX real
-            pix_provider = create_brazilian_pix_provider()
-            pix_data = pix_provider.create_pix_payment(
-                amount=amount,
-                customer_name=user_name,
-                customer_cpf=user_cpf,
-                customer_email=default_email
-            )
-            
-            # Atualizar descrição para "Receita de bolo"
-            if pix_data.get('success'):
-                pix_data['description'] = "Receita de bolo"
-                
-        except Exception as e:
-            app.logger.error(f"[PROD] Erro ao gerar PIX: {e}")
-            return jsonify({
-                'success': False,
-                'error': 'Erro na geração do PIX. Tente novamente em alguns instantes.'
-            }), 500
-
         app.logger.info(f"[PROD] PIX gerado com sucesso: {pix_data}")
 
         return jsonify({
