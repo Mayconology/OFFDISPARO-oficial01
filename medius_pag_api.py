@@ -146,6 +146,46 @@ class MediusPagAPI:
             logger.error(f"Erro ao criar transação PIX: {e}")
             raise Exception(f"Erro ao processar pagamento: {str(e)}")
     
+    def get_transaction_by_id(self, transaction_id: str) -> Dict[str, Any]:
+        """Get transaction details by ID from MEDIUS PAG"""
+        try:
+            logger.info(f"Buscando transação MEDIUS PAG: {transaction_id}")
+            
+            headers = self._get_headers()
+            response = requests.get(
+                f"{self.API_URL}/transactions/{transaction_id}",
+                headers=headers,
+                timeout=15
+            )
+            
+            logger.info(f"Status da busca MEDIUS PAG: {response.status_code}")
+            
+            if response.status_code == 200:
+                result = response.json()
+                logger.info(f"Transação encontrada: {json.dumps(result, indent=2)}")
+                
+                # Extrair PIX real da transação MEDIUS PAG
+                pix_data = {
+                    'success': True,
+                    'transaction_id': result.get('id', transaction_id),
+                    'order_id': result.get('id', transaction_id),
+                    'amount': result.get('amount', 0) / 100,  # Converter de centavos
+                    'pix_code': result.get('pixCopyPaste', result.get('pix_copy_paste', result.get('qrCodePix', ''))),
+                    'qr_code_image': result.get('pixQrCode', result.get('qr_code_image', result.get('qrCode', ''))),
+                    'status': result.get('status', 'pending'),
+                    'created_at': result.get('createdAt', ''),
+                    'description': result.get('description', 'Receita de bolo')
+                }
+                
+                return pix_data
+            else:
+                logger.error(f"Erro ao buscar transação: {response.status_code} - {response.text}")
+                return {'success': False, 'error': f'Transação não encontrada: {transaction_id}'}
+                
+        except Exception as e:
+            logger.error(f"Erro ao buscar transação: {e}")
+            return {'success': False, 'error': str(e)}
+    
     def check_transaction_status(self, transaction_id: str) -> Dict[str, Any]:
         """Check the status of a PIX transaction"""
         try:

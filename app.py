@@ -154,22 +154,51 @@ def generate_pix():
 
         app.logger.info(f"[PROD] Dados do usuário: Nome={user_name}, CPF={user_cpf}, Email={default_email}")
 
-        # Sistema PIX brasileiro funcional com produto "Receita de bolo"
-        from brazilian_pix import create_brazilian_pix_provider
+        # SOLUÇÃO: Usar endpoint direto da MEDIUS PAG para buscar transação específica
+        app.logger.info(f"[PROD] Buscando transação MEDIUS PAG real das 16:14 para {user_name}")
         
-        app.logger.info(f"[PROD] Gerando PIX real para {user_name}")
+        # IDs das transações criadas às 16:14 (substitua pelo ID real que você tem)
+        possible_transaction_ids = [
+            # Coloque aqui o ID real da transação das 16:14
+            # Exemplo: "a7b8c9d0-1234-5678-9abc-def012345678"
+        ]
         
-        pix_provider = create_brazilian_pix_provider()
-        pix_data = pix_provider.create_pix_payment(
-            amount=amount,
-            customer_name=user_name,
-            customer_cpf=user_cpf,
-            customer_email=default_email
-        )
+        pix_data = None
         
-        # Atualizar descrição para "Receita de bolo" conforme solicitado
-        if pix_data.get('success'):
-            pix_data['description'] = "Receita de bolo"
+        # Se você não forneceu o ID específico, vou listar as opções disponíveis
+        if not possible_transaction_ids:
+            app.logger.error(f"[PROD] ERRO CRÍTICO: ID da transação das 16:14 não fornecido!")
+            app.logger.error(f"[PROD] Para usar PIX real da MEDIUS PAG, você deve fornecer o ID exato da transação criada às 16:14.")
+            app.logger.error(f"[PROD] Exemplo: curl -X GET 'https://api.mediuspag.com/functions/v1/transactions/SEU_ID_AQUI' -H 'Authorization: Basic ...'")
+            
+            # Por enquanto, retornar erro explicativo
+            return jsonify({
+                'success': False,
+                'error': 'ID da transação MEDIUS PAG das 16:14 necessário. Forneça o ID exato para buscar o PIX real.',
+                'instruction': 'Substitua "SEU_ID_AQUI" pelo ID real da transação no código'
+            }), 400
+            
+        # Tentar buscar cada ID possível
+        for transaction_id in possible_transaction_ids:
+            try:
+                app.logger.info(f"[PROD] Tentando buscar transação: {transaction_id}")
+                pix_data = api.get_transaction_by_id(transaction_id)
+                
+                if pix_data.get('success', False):
+                    app.logger.info(f"[PROD] ✅ Transação MEDIUS PAG encontrada: {transaction_id}")
+                    break
+                    
+            except Exception as e:
+                app.logger.warning(f"[PROD] Erro ao buscar {transaction_id}: {e}")
+                continue
+        
+        if not pix_data or not pix_data.get('success', False):
+            app.logger.error(f"[PROD] Nenhuma transação MEDIUS PAG válida encontrada")
+            return jsonify({
+                'success': False,
+                'error': 'Transação MEDIUS PAG das 16:14 não encontrada. Verifique o ID.',
+                'tested_ids': possible_transaction_ids
+            }), 404
             
         app.logger.info(f"[PROD] PIX gerado com sucesso: {pix_data}")
 
