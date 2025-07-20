@@ -116,25 +116,77 @@ class MediusPagAPI:
                         'transaction_id': result.get('id', transaction_id),
                         'order_id': result.get('id', transaction_id),
                         'amount': data['amount'],
-                        'pix_code': result.get('pixCopyPaste', result.get('pix_copy_paste', result.get('qrCodePix', ''))),
-                        'qr_code_image': result.get('pixQrCode', result.get('qr_code_image', result.get('qrCode', ''))),
                         'status': result.get('status', 'pending'),
                         'created_at': result.get('createdAt', datetime.now().isoformat())
                     }
                     
-                    # Verificar se temos dados PIX válidos na resposta MEDIUS PAG
-                    if not pix_data['pix_code'] and not pix_data['qr_code_image']:
-                        logger.warning("Resposta MEDIUS PAG não contém dados PIX, verificando estruturas alternativas...")
+                    # Buscar PIX code na estrutura de resposta da MEDIUS PAG
+                    pix_code_found = False
+                    qr_code_found = False
+                    
+                    # Buscar PIX code na estrutura aninhada da MEDIUS PAG
+                    # Baseado nos logs: result["pix"]["qrcode"] é o campo correto
+                    if 'pix' in result and isinstance(result['pix'], dict):
+                        pix_info = result['pix']
                         
-                        # Tentar extrair de estruturas diferentes do MEDIUS PAG
-                        if 'pix' in result:
-                            pix_info = result['pix']
-                            pix_data['pix_code'] = pix_info.get('copyPaste', pix_info.get('code', ''))
-                            pix_data['qr_code_image'] = pix_info.get('qrCode', pix_info.get('base64Image', ''))
-                        elif 'paymentData' in result:
-                            payment_info = result['paymentData']
-                            pix_data['pix_code'] = payment_info.get('pixCopyPaste', '')
-                            pix_data['qr_code_image'] = payment_info.get('pixQrCode', '')
+                        # Campo correto da MEDIUS PAG é "qrcode"
+                        if 'qrcode' in pix_info and pix_info['qrcode']:
+                            pix_data['pix_code'] = pix_info['qrcode']
+                            pix_code_found = True
+                            logger.info(f"✅ PIX code real MEDIUS PAG encontrado: {pix_info['qrcode'][:50]}...")
+                        
+                        # Também verificar outros campos possíveis
+                        if not pix_code_found and 'pixCopyPaste' in pix_info and pix_info['pixCopyPaste']:
+                            pix_data['pix_code'] = pix_info['pixCopyPaste']
+                            pix_code_found = True
+                            logger.info(f"✅ PIX code real MEDIUS PAG encontrado em pixCopyPaste: {pix_info['pixCopyPaste'][:50]}...")
+                        
+                        if 'pixQrCode' in pix_info and pix_info['pixQrCode']:
+                            pix_data['qr_code_image'] = pix_info['pixQrCode']
+                            qr_code_found = True
+                            logger.info(f"✅ QR code real MEDIUS PAG encontrado")
+                    
+                    # Verificar na estrutura principal como fallback
+                    if not pix_code_found and 'pixCopyPaste' in result and result['pixCopyPaste']:
+                        pix_data['pix_code'] = result['pixCopyPaste']
+                        pix_code_found = True
+                        logger.info(f"✅ PIX code real MEDIUS PAG encontrado na raiz: {result['pixCopyPaste'][:50]}...")
+                    
+                    if not qr_code_found and 'pixQrCode' in result and result['pixQrCode']:
+                        pix_data['qr_code_image'] = result['pixQrCode']
+                        qr_code_found = True
+                        logger.info(f"✅ QR code real MEDIUS PAG encontrado na raiz")
+                    
+                    # Se não encontrou, verificar estruturas alternativas
+                    if not pix_code_found:
+                        # Outros campos possíveis
+                        for field in ['qrCodePix', 'pix_copy_paste', 'copyPaste', 'code']:
+                            if field in result and result[field]:
+                                pix_data['pix_code'] = result[field]
+                                pix_code_found = True
+                                logger.info(f"✅ PIX code encontrado em {field}")
+                                break
+                    
+                    if not qr_code_found:
+                        # Outros campos possíveis para QR code
+                        for field in ['qrCode', 'qr_code_image', 'base64Image']:
+                            if field in result and result[field]:
+                                pix_data['qr_code_image'] = result[field]
+                                qr_code_found = True
+                                logger.info(f"✅ QR code encontrado em {field}")
+                                break
+                    
+                    # Log final do que foi encontrado
+                    if not pix_code_found and not qr_code_found:
+                        logger.warning("Resposta MEDIUS PAG não contém dados PIX válidos")
+                    else:
+                        logger.info(f"✅ MEDIUS PAG - PIX: {pix_code_found}, QR: {qr_code_found}")
+                    
+                    # Definir valores padrão vazios se não encontrados
+                    if not pix_code_found:
+                        pix_data['pix_code'] = ''
+                    if not qr_code_found:
+                        pix_data['qr_code_image'] = ''
                     
                     return pix_data
                     

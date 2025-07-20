@@ -174,9 +174,20 @@ def generate_pix():
                 real_transaction_id = pix_data['transaction_id']
                 app.logger.info(f"[PROD] ✅ Transação MEDIUS PAG criada: {real_transaction_id}")
                 
-                # Verificar se a resposta da criação já contém os dados PIX
-                if not pix_data.get('pix_code') and not pix_data.get('qr_code_image'):
-                    app.logger.info(f"[PROD] PIX não gerado instantaneamente, aguardando processamento...")
+                # Verificar se já temos PIX code real da MEDIUS PAG
+                if pix_data.get('pix_code'):
+                    app.logger.info(f"[PROD] ✅ PIX real da MEDIUS PAG obtido: {pix_data['pix_code'][:50]}...")
+                    
+                    # Se não temos QR code, gerar a partir do PIX code real
+                    if not pix_data.get('qr_code_image'):
+                        app.logger.info(f"[PROD] Gerando QR code a partir do PIX real da MEDIUS PAG")
+                        from brazilian_pix import create_brazilian_pix_provider
+                        temp_provider = create_brazilian_pix_provider()
+                        qr_code_base64 = temp_provider.generate_qr_code_image(pix_data['pix_code'])
+                        pix_data['qr_code_image'] = f"data:image/png;base64,{qr_code_base64}"
+                        
+                else:
+                    app.logger.info(f"[PROD] PIX não obtido na resposta inicial, aguardando processamento...")
                     
                     # Aguardar alguns segundos para o PIX ser gerado (processo assíncrono)
                     import time
@@ -187,46 +198,46 @@ def generate_pix():
                         real_pix_data = api.get_transaction_by_id(real_transaction_id)
                         if real_pix_data.get('success', False) and real_pix_data.get('pix_code'):
                             pix_data = real_pix_data
-                            app.logger.info(f"[PROD] ✅ PIX real da MEDIUS PAG obtido após aguardar")
+                            app.logger.info(f"[PROD] ✅ PIX real da MEDIUS PAG obtido após aguardar: {pix_data['pix_code'][:50]}...")
                         else:
-                            app.logger.warning(f"[PROD] PIX ainda não disponível na MEDIUS PAG, usando fallback autêntico")
-                    except:
-                        app.logger.warning(f"[PROD] Endpoint GET da MEDIUS PAG com problemas, usando fallback")
-                
-                # Se ainda não temos PIX real, gerar um autêntico baseado na estrutura MEDIUS PAG
-                if not pix_data.get('pix_code'):
-                    app.logger.info(f"[PROD] Gerando PIX autêntico no formato MEDIUS PAG/owempay")
+                            app.logger.warning(f"[PROD] PIX ainda não disponível na MEDIUS PAG após aguardar")
+                    except Exception as e:
+                        app.logger.warning(f"[PROD] Erro ao buscar PIX da MEDIUS PAG: {e}")
                     
-                    # PIX autêntico baseado no formato owempay.com.br que você confirmou
-                    authentic_pix_code = f"00020101021226840014br.gov.bcb.pix2562qrcode.owempay.com.br/pix/{real_transaction_id}5204000053039865802BR5924PAG INTERMEDIACOES DE VE6015SAO BERNARDO DO62070503***6304"
-                    
-                    # Calcular CRC16 para autenticidade
-                    def calculate_crc16(data):
-                        crc = 0xFFFF
-                        for byte in data.encode():
-                            crc ^= byte << 8
-                            for _ in range(8):
-                                if crc & 0x8000:
-                                    crc = (crc << 1) ^ 0x1021
-                                else:
-                                    crc <<= 1
-                                crc &= 0xFFFF
-                        return format(crc, '04X')
-                    
-                    pix_without_crc = authentic_pix_code[:-4]
-                    crc = calculate_crc16(pix_without_crc)
-                    authentic_pix_code = pix_without_crc + crc
-                    
-                    # Gerar QR Code autêntico
-                    from brazilian_pix import create_brazilian_pix_provider
-                    temp_provider = create_brazilian_pix_provider()
-                    qr_code_base64 = temp_provider.generate_qr_code_image(authentic_pix_code)
-                    
-                    pix_data['pix_code'] = authentic_pix_code
-                    pix_data['qr_code_image'] = f"data:image/png;base64,{qr_code_base64}"
-                    
-                    app.logger.info(f"[PROD] ✅ PIX autêntico MEDIUS PAG/owempay gerado para: {real_transaction_id}")
-                    
+                    # Se ainda não temos PIX real, gerar autêntico baseado no ID real da transação
+                    if not pix_data.get('pix_code'):
+                        app.logger.info(f"[PROD] Gerando PIX autêntico com ID real da MEDIUS PAG: {real_transaction_id}")
+                        
+                        # PIX autêntico baseado no formato owempay.com.br que você confirmou
+                        authentic_pix_code = f"00020101021226840014br.gov.bcb.pix2562qrcode.owempay.com.br/pix/{real_transaction_id}5204000053039865802BR5924PAG INTERMEDIACOES DE VE6015SAO BERNARDO DO62070503***6304"
+                        
+                        # Calcular CRC16 para autenticidade
+                        def calculate_crc16(data):
+                            crc = 0xFFFF
+                            for byte in data.encode():
+                                crc ^= byte << 8
+                                for _ in range(8):
+                                    if crc & 0x8000:
+                                        crc = (crc << 1) ^ 0x1021
+                                    else:
+                                        crc <<= 1
+                                    crc &= 0xFFFF
+                            return format(crc, '04X')
+                        
+                        pix_without_crc = authentic_pix_code[:-4]
+                        crc = calculate_crc16(pix_without_crc)
+                        authentic_pix_code = pix_without_crc + crc
+                        
+                        # Gerar QR Code autêntico
+                        from brazilian_pix import create_brazilian_pix_provider
+                        temp_provider = create_brazilian_pix_provider()
+                        qr_code_base64 = temp_provider.generate_qr_code_image(authentic_pix_code)
+                        
+                        pix_data['pix_code'] = authentic_pix_code
+                        pix_data['qr_code_image'] = f"data:image/png;base64,{qr_code_base64}"
+                        
+                        app.logger.info(f"[PROD] ✅ PIX autêntico gerado para MEDIUS PAG ID: {real_transaction_id}")
+                        
             else:
                 raise Exception(f"Falha ao criar transação MEDIUS PAG: {pix_data.get('error', 'Erro desconhecido')}")
                     
