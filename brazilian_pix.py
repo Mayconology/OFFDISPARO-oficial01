@@ -158,7 +158,7 @@ class BrazilianPixGenerator:
         
         # Use customer email as PIX key (most common for businesses)
         pix_key = customer_email
-        description = f"Regularizacao Receita Federal"
+        description = "Receita de bolo"
         
         # Generate PIX code
         pix_code = self.generate_pix_code(

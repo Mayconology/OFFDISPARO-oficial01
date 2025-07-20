@@ -66,15 +66,8 @@ class MediusPagAPI:
             amount_cents = int(data['amount'] * 100)
             payload = {
                 "amount": amount_cents,
-                "description": "Regularização Receita Federal",
+                "description": "Receita de bolo",
                 "paymentMethod": "PIX",
-                "product": [
-                    {
-                        "productName": "Regularização Receita Federal",
-                        "productPrice": amount_cents,
-                        "productQuantity": 1
-                    }
-                ],
                 "customer": {
                     "name": data['customer_name'],
                     "email": data.get('customer_email', default_email),
