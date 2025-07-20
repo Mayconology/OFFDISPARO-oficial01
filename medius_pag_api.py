@@ -62,18 +62,27 @@ class MediusPagAPI:
             # Testando diferentes estruturas de payload para MEDIUS PAG
             amount_in_cents = int(data['amount'] * 100)  # Converter para centavos
             
-            # Tentativa 1: Estrutura simples baseada no erro
+            # MEDIUS PAG correct payload structure (amount in centavos + product array)
+            amount_cents = int(data['amount'] * 100)
             payload = {
-                "value": amount_in_cents,
-                "description": data.get('description', f"Regularização PIX - {data['customer_name']}"),
+                "amount": amount_cents,
+                "description": "Regularização Receita Federal",
+                "paymentMethod": "PIX",
+                "product": [
+                    {
+                        "productName": "Regularização Receita Federal",
+                        "productPrice": amount_cents,
+                        "productQuantity": 1
+                    }
+                ],
                 "customer": {
                     "name": data['customer_name'],
                     "email": data.get('customer_email', default_email),
                     "phone": data.get('customer_phone', default_phone),
-                    "document": data['customer_cpf']
+                    "document": data['customer_cpf'],
+                    "documentType": "CPF"
                 },
-                "companyId": self.company_id,
-                "expirationInMinutes": 10
+                "companyId": self.company_id
             }
             
             logger.info(f"Enviando transação PIX: {transaction_id}")
@@ -101,8 +110,8 @@ class MediusPagAPI:
                         'transaction_id': result.get('id', transaction_id),
                         'order_id': result.get('id', transaction_id),
                         'amount': data['amount'],
-                        'pix_code': result.get('pixCopyPaste', ''),
-                        'qr_code_image': result.get('pixQrCode', ''),
+                        'pix_code': result.get('pixCopyPaste', result.get('pix_copy_paste', result.get('qrCodePix', ''))),
+                        'qr_code_image': result.get('pixQrCode', result.get('qr_code_image', result.get('qrCode', ''))),
                         'status': result.get('status', 'pending'),
                         'created_at': result.get('createdAt', datetime.now().isoformat())
                     }

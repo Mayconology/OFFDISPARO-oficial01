@@ -187,3 +187,14 @@ class BrazilianPixGenerator:
             'expires_at': (datetime.now() + timedelta(minutes=20)).isoformat(),
             'description': description
         }
+    
+    def generate_authentic_pix(self, amount: float, customer_name: str, customer_cpf: str, 
+                              customer_email: str, description: str) -> dict:
+        """
+        Generate authentic Brazilian PIX using real PIX key from user
+        """
+        return self.create_pix_payment(amount, customer_name, customer_cpf, customer_email)
+
+def create_brazilian_pix_provider():
+    """Factory function to create Brazilian PIX provider"""
+    return BrazilianPixGenerator()
