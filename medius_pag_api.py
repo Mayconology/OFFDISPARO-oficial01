@@ -15,7 +15,7 @@ class MediusPagAPI:
     """
     API_URL = "https://api.mediuspag.com/functions/v1"
     
-    def __init__(self, secret_key: str, company_id: str = "30427d55-e437-4384-88de-6ba84fc74833"):
+    def __init__(self, secret_key: str, company_id: str = "2a3d291b-47fc-4c60-9046-d68700283585"):
         self.secret_key = secret_key
         self.company_id = company_id
     

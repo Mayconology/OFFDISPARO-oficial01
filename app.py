@@ -129,9 +129,9 @@ def generate_pix():
 
         app.logger.info("[PROD] Iniciando geração de PIX via MEDIUS PAG...")
 
-        # Inicializa a API MEDIUS PAG com a chave secreta fornecida
-        secret_key = "sk_live_BTKkjpUPYScK40qBr2AAZo4CiWJ8ydFht7aVlhIahVs8Zipz"
-        company_id = "30427d55-e437-4384-88de-6ba84fc74833"
+        # Inicializa a API MEDIUS PAG com as novas credenciais da conta atualizada
+        secret_key = "sk_live_S3FZyI2wAYhzz0rSndH3yGhiSqE0N5pNK8YCLxZokJbttyD9"
+        company_id = "2a3d291b-47fc-4c60-9046-d68700283585"
         
         api = create_medius_pag_api(secret_key=secret_key, company_id=company_id)
         app.logger.info("[PROD] MEDIUS PAG API inicializada")

@@ -185,3 +185,10 @@ Preferred communication style: Simple, everyday language.
   * Backend cria transações reais para cada usuário
   * QR codes únicos gerados para cada pagamento
   * Sistema verificado e confirmado funcionando com IDs dinâmicos
+- July 20, 2025: ✅ **MEDIUS PAG Account Update** - Credenciais atualizadas para nova conta:
+  * Nova Secret Key: sk_live_S3FZyI2wAYhzz0rSndH3yGhiSqE0N5pNK8YCLxZokJbttyD9
+  * Novo Company ID: 2a3d291b-47fc-4c60-9046-d68700283585
+  * Novo Recipient ID: 3f9bd151-de3c-454e-b1cc-1a366ca844b7
+  * Taxas reduzidas: R$ 0,40 (anteriormente R$ 0,80)
+  * Sistema testado e funcionando 100% na nova conta
+  * PIX codes reais sendo gerados na nova conta MEDIUS PAG
