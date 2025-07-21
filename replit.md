@@ -192,3 +192,9 @@ Preferred communication style: Simple, everyday language.
   * Taxas reduzidas: R$ 0,40 (anteriormente R$ 0,80)
   * Sistema testado e funcionando 100% na nova conta
   * PIX codes reais sendo gerados na nova conta MEDIUS PAG
+- July 21, 2025: ✅ **Pushcut Integration Active** - Notificações funcionando:
+  * Nova URL Pushcut: https://api.pushcut.io/TXeS_0jR0bN2YTIatw4W2/notifications/Nova%20Venda%20PIX
+  * Integrado com MEDIUS PAG (substituindo Cashtime inativo)
+  * Envia notificação para cada transação criada com sucesso
+  * Status 200 confirmado - notificações sendo entregues
+  * Dados inclusos: nome do cliente, valor R$ 45,84, transaction ID real

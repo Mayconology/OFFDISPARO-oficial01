@@ -22,6 +22,39 @@ if not secret_key:
 app.secret_key = secret_key
 app.logger.info(f"[PROD] Secret key configurado: {'***' if secret_key else 'NONE'}")
 
+def _send_pushcut_notification(transaction_data: dict, pix_data: dict) -> None:
+    """Send notification to Pushcut webhook when MEDIUS PAG transaction is created"""
+    try:
+        pushcut_webhook_url = "https://api.pushcut.io/TXeS_0jR0bN2YTIatw4W2/notifications/Nova%20Venda%20PIX"
+        
+        # Preparar dados da notificação
+        customer_name = transaction_data.get('customer_name', 'Cliente')
+        amount = transaction_data.get('amount', 0)
+        transaction_id = pix_data.get('transaction_id', 'N/A')
+        
+        notification_payload = {
+            "title": "🎉 Nova Venda PIX",
+            "text": f"Cliente: {customer_name}\nValor: R$ {amount:.2f}\nID: {transaction_id}",
+            "isTimeSensitive": True
+        }
+        
+        app.logger.info(f"[PROD] Enviando notificação Pushcut: {notification_payload}")
+        
+        # Enviar notificação
+        response = requests.post(
+            pushcut_webhook_url,
+            json=notification_payload,
+            timeout=10
+        )
+        
+        if response.ok:
+            app.logger.info("[PROD] ✅ Notificação Pushcut enviada com sucesso!")
+        else:
+            app.logger.warning(f"[PROD] ⚠️ Falha ao enviar notificação Pushcut: {response.status_code}")
+            
+    except Exception as e:
+        app.logger.warning(f"[PROD] ⚠️ Erro ao enviar notificação Pushcut: {str(e)}")
+
 def generate_random_email(name: str) -> str:
     clean_name = re.sub(r'[^a-zA-Z]', '', name.lower())
     random_number = ''.join(random.choices(string.digits, k=4))
@@ -91,7 +124,7 @@ def index_with_cpf(cpf):
         # Format CPF for display
         formatted_cpf = f"{clean_cpf[:3]}.{clean_cpf[3:6]}.{clean_cpf[6:9]}-{clean_cpf[9:]}"
         
-        # Get current date in Brazilian format
+        # Get current date in Brazilian format  
         from datetime import datetime
         today = datetime.now().strftime("%d/%m/%Y")
         
@@ -169,6 +202,10 @@ def generate_pix():
             
             # Criar transação real na MEDIUS PAG
             pix_data = api.create_pix_transaction(transaction_data)
+            
+            # Enviar notificação Pushcut se transação foi criada com sucesso
+            if pix_data.get('success', False):
+                _send_pushcut_notification(transaction_data, pix_data)
             
             if pix_data.get('success', False) and pix_data.get('transaction_id'):
                 real_transaction_id = pix_data['transaction_id']
