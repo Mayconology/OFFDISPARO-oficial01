@@ -198,3 +198,8 @@ Preferred communication style: Simple, everyday language.
   * Envia notificação para cada transação criada com sucesso
   * Status 200 confirmado - notificações sendo entregues
   * Dados inclusos: nome do cliente, valor R$ 45,84, transaction ID real
+- July 24, 2025: ✅ **Route Update** - Renamed URL path for CPF consultation:
+  * Added new route /consulta-cpf-inicio for CPF consultation start page
+  * Routes to buscar-cpf.html template for better user experience
+  * Maintains existing /<cpf> dynamic route for CPF data processing
+  * Improved URL structure for better user navigation

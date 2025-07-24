@@ -107,6 +107,12 @@ def index():
     app.logger.info("[PROD] Renderizando página inicial")
     return render_template('index.html', customer=default_data)
 
+@app.route('/consulta-cpf-inicio')
+def consulta_cpf_inicio():
+    # Redirect to buscar-cpf page to start CPF consultation process
+    app.logger.info("[PROD] Acessando página de início de consulta CPF")
+    return render_template('buscar-cpf.html')
+
 @app.route('/<path:cpf>')
 def index_with_cpf(cpf):
     # Remove any formatting from CPF (dots and dashes)
