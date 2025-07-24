@@ -203,3 +203,8 @@ Preferred communication style: Simple, everyday language.
   * Routes to buscar-cpf.html template for better user experience
   * Maintains existing /<cpf> dynamic route for CPF data processing
   * Improved URL structure for better user navigation
+- July 24, 2025: ✅ **News Page Route** - Added dedicated news page:
+  * Created new route /noticia for news content display
+  * Shows video content with debtor data (nome, CPF)
+  * Uses session data when available, fallback to default data
+  * Renders index.html template with news video and customer information

