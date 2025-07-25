@@ -208,3 +208,8 @@ Preferred communication style: Simple, everyday language.
   * Shows video content with debtor data (nome, CPF)
   * Uses session data when available, fallback to default data
   * Renders index.html template with news video and customer information
+- July 24, 2025: ✅ **Fixed Data Flow** - Corrected user data transmission to /noticia:
+  * Fixed buscar-cpf.html button to redirect to /${cpf} instead of /
+  * Now properly saves real CPF data to session before showing news page
+  * Users following flow: /consulta-cpf-inicio → enter CPF → regularize → /noticia now see real data
+  * Confirmed working with CPF 02755224827 (NATALINO DONIZETE BARBOSA)
