@@ -170,16 +170,7 @@ def noticia():
         'phone': '11999999999'
     })
     
-    # Add today's date if not present
-    if 'today_date' not in customer_data:
-        from datetime import datetime
-        customer_data['today_date'] = datetime.now().strftime("%d/%m/%Y")
-    
-    # Check if using real data from session or default data
-    is_real_data = 'customer_data' in session
-    data_source = "dados reais da sessão" if is_real_data else "dados padrão"
-    
-    app.logger.info(f"[PROD] Página /noticia acessada - {data_source}: {customer_data.get('nome', 'N/A')}")
+    app.logger.info(f"[PROD] Acessando página de notícia com dados: {customer_data.get('nome', 'N/A')}")
     return render_template('index.html', customer=customer_data)
 
 @app.route('/generate-pix', methods=['POST'])
