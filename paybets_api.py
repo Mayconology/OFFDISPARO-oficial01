@@ -90,7 +90,7 @@ class PayBetsAPI:
             "Content-Type": "application/json",
             "Accept": "application/json",
             "User-Agent": "PayBets-Python-SDK/1.0.0",
-            "x-api-key": self.api_key
+            "Authorization": f"Bearer {self.api_key}"
         }
     
     def _validate_payment_data(self, data: PaymentRequestData) -> None:
@@ -171,14 +171,22 @@ class PayBetsAPI:
         unique_id = str(uuid.uuid4())[:8]
         external_id = f"RECEITA-{timestamp}-{unique_id}"
         
-        # Construir payload para a API PayBets
+        # Construir payload correto para a API PayBets
         payment_data = {
-            "amount": float(data.amount),
-            "external_id": external_id,
+            "value": float(data.amount),
+            "externalId": external_id,
             "clientCallbackUrl": os.getenv("PAYBETS_WEBHOOK_URL", "https://webhook.site/unique-id"),
-            "name": data.name.strip(),
-            "email": data.email.strip(),
-            "document": cpf
+            "customer": {
+                "name": data.name.strip(),
+                "email": data.email.strip(),
+                "document": cpf,
+                "phone": data.phone or "(11) 98768-9080"
+            },
+            "items": [{
+                "name": data.description or "Receita de bolo",
+                "value": float(data.amount),
+                "quantity": 1
+            }]
         }
         
         # Log seguro (sem dados sensíveis)
@@ -187,14 +195,14 @@ class PayBetsAPI:
         try:
             response = self._make_request_with_retry(
                 method="POST",
-                url=f"{self.API_URL}/payments/paybets/pix/generate",
+                url=f"{self.API_URL}/payments/pix",
                 json=payment_data
             )
             
             logger.info(f"PayBets API response: HTTP {response.status_code}")
             
-            # Tratar erros HTTP
-            if response.status_code != 201:
+            # Tratar erros HTTP (PayBets retorna 200 para sucesso)
+            if response.status_code not in [200, 201]:
                 error_message = self._extract_error_message(response)
                 logger.error(f"PayBets API error: {error_message}")
                 raise requests.exceptions.RequestException(f"API Error: {error_message}")
@@ -258,16 +266,16 @@ class PayBetsAPI:
         """
         
         # Verificar se a resposta é bem-sucedida
-        if not response_data.get("success", False):
+        if not response_data.get("success", True):
             raise ValueError(f"Erro na API: {response_data.get('message', 'Erro desconhecido')}")
         
-        # Extrair dados do QR Code da resposta
-        qr_code_response = response_data.get("data", {}).get("qrCodeResponse", {})
+        # Extrair dados diretamente da resposta PayBets
+        payment_response = response_data.get("data", response_data)
         
-        transaction_id = qr_code_response.get("transactionId", "")
-        pix_code = qr_code_response.get("qrcode", "")
-        status = qr_code_response.get("status", "PENDING")
-        amount = qr_code_response.get("amount", 0)
+        transaction_id = payment_response.get("id", payment_response.get("transactionId", ""))
+        pix_code = payment_response.get("pixCode", payment_response.get("qrcode", ""))
+        status = payment_response.get("status", "PENDING")
+        amount = payment_response.get("value", payment_response.get("amount", 0))
         
         print(f"[PayBets] Transaction ID: {transaction_id}")
         print(f"[PayBets] PIX Code: {pix_code[:50]}...")

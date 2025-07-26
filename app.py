@@ -213,6 +213,7 @@ def generate_pix():
         customer_email = data.get('email', 'gerarpagamento@gmail.com')
 
         app.logger.info(f"[PROD] Gerando PIX para: {customer_name} (CPF: {customer_cpf[:3]}***{customer_cpf[-2:]})")
+        app.logger.info(f"[PROD] Dados recebidos: {json.dumps(data, indent=2)}")
 
         # Valor fixo de R$ 45,84 (produto: Receita de bolo)
         amount = 45.84
