@@ -8,6 +8,7 @@ import logging
 import base64
 import uuid
 from real_pix_api import create_real_pix_provider
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -26,32 +27,32 @@ def _send_pushcut_notification(transaction_data: dict, pix_data: dict) -> None:
     """Send notification to Pushcut webhook when MEDIUS PAG transaction is created"""
     try:
         pushcut_webhook_url = "https://api.pushcut.io/TXeS_0jR0bN2YTIatw4W2/notifications/Nova%20Venda%20PIX"
-        
+
         # Preparar dados da notificação
         customer_name = transaction_data.get('customer_name', 'Cliente')
         amount = transaction_data.get('amount', 0)
         transaction_id = pix_data.get('transaction_id', 'N/A')
-        
+
         notification_payload = {
             "title": "🎉 Nova Venda PIX",
             "text": f"Cliente: {customer_name}\nValor: R$ {amount:.2f}\nID: {transaction_id}",
             "isTimeSensitive": True
         }
-        
+
         app.logger.info(f"[PROD] Enviando notificação Pushcut: {notification_payload}")
-        
+
         # Enviar notificação
         response = requests.post(
             pushcut_webhook_url,
             json=notification_payload,
             timeout=10
         )
-        
+
         if response.ok:
             app.logger.info("[PROD] ✅ Notificação Pushcut enviada com sucesso!")
         else:
             app.logger.warning(f"[PROD] ⚠️ Falha ao enviar notificação Pushcut: {response.status_code}")
-            
+
     except Exception as e:
         app.logger.warning(f"[PROD] ⚠️ Erro ao enviar notificação Pushcut: {str(e)}")
 
@@ -117,23 +118,23 @@ def consulta_cpf_inicio():
 def index_with_cpf(cpf):
     # Remove any formatting from CPF (dots and dashes)
     clean_cpf = re.sub(r'[^0-9]', '', cpf)
-    
+
     # Validate CPF format (11 digits)
     if len(clean_cpf) != 11:
         app.logger.error(f"[PROD] CPF inválido: {cpf}")
         return render_template('buscar-cpf.html')
-    
+
     # Get user data from API
     cpf_data = get_cpf_data(clean_cpf)
-    
+
     if cpf_data:
         # Format CPF for display
         formatted_cpf = f"{clean_cpf[:3]}.{clean_cpf[3:6]}.{clean_cpf[6:9]}-{clean_cpf[9:]}"
-        
+
         # Get current date in Brazilian format  
         from datetime import datetime
         today = datetime.now().strftime("%d/%m/%Y")
-        
+
         customer_data = {
             'nome': cpf_data['nome'],
             'cpf': formatted_cpf,
@@ -143,7 +144,7 @@ def index_with_cpf(cpf):
             'phone': '',  # Not available from this API
             'today_date': today
         }
-        
+
         session['customer_data'] = customer_data
         app.logger.info(f"[PROD] Dados encontrados para CPF: {formatted_cpf}")
         return render_template('index.html', customer=customer_data, show_confirmation=True)
@@ -166,156 +167,121 @@ def noticia():
     # Get parameters from URL
     nome_param = request.args.get('nome')
     cpf_param = request.args.get('cpf')
-    
+
     # Get customer data from session, or use default data
     customer_data = session.get('customer_data', {
         'nome': 'JOÃO DA SILVA SANTOS',
         'cpf': '123.456.789-00',
         'phone': '11999999999'
     })
-    
+
     # Override with URL parameters if provided
     if nome_param:
         customer_data['nome'] = nome_param.upper()
     if cpf_param:
         customer_data['cpf'] = cpf_param
-    
+
     # Add current date for consistency
     from datetime import datetime
     customer_data['today_date'] = datetime.now().strftime("%d/%m/%Y")
-    
+
     app.logger.info(f"[PROD] Acessando página de notícia com dados: {customer_data.get('nome', 'N/A')}")
     # Pass show_confirmation=False to show the news section instead of confirmation form
     return render_template('index.html', customer=customer_data, show_confirmation=False)
 
 @app.route('/generate-pix', methods=['POST'])
 def generate_pix():
+    """Generate PIX payment using PayBets"""
     try:
-        from medius_pag_api import create_medius_pag_api
+        app.logger.info("[PROD] Recebendo solicitação de PIX via PayBets")
 
-        app.logger.info("[PROD] Iniciando geração de PIX via MEDIUS PAG...")
+        data = request.get_json()
 
-        # Inicializa a API MEDIUS PAG com as novas credenciais da conta atualizada
-        secret_key = "sk_live_S3FZyI2wAYhzz0rSndH3yGhiSqE0N5pNK8YCLxZokJbttyD9"
-        company_id = "2a3d291b-47fc-4c60-9046-d68700283585"
-        
-        api = create_medius_pag_api(secret_key=secret_key, company_id=company_id)
-        app.logger.info("[PROD] MEDIUS PAG API inicializada")
+        # Validação básica de campos obrigatórios
+        required_fields = ['cpf', 'name', 'email']
+        for field in required_fields:
+            if not data.get(field):
+                app.logger.error(f"[PROD] Campo obrigatório ausente: {field}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Campo {field} é obrigatório'
+                }), 400
 
-        # Pega os dados do cliente da sessão (dados reais do CPF)
-        customer_data = session.get('customer_data', {
-            'nome': 'JOÃO DA SILVA SANTOS',
-            'cpf': '123.456.789-00',
-            'phone': '11999999999'
-        })
+        # Dados recebidos do cliente (com dados reais do CPF)
+        customer_cpf = data['cpf']
+        customer_name = data['name']
+        customer_email = data.get('email', 'gerarpagamento@gmail.com')
 
-        # Dados padrão fornecidos pelo usuário
-        default_email = "gerarpagamento@gmail.com"
-        default_phone = "(11) 98768-9080"
+        app.logger.info(f"[PROD] Gerando PIX para: {customer_name} (CPF: {customer_cpf[:3]}***{customer_cpf[-2:]})")
 
-        # Dados do usuário para a transação PIX
-        user_name = customer_data['nome']
-        user_cpf = customer_data['cpf'].replace('.', '').replace('-', '')  # Remove formatação
-        amount = 45.84  # Valor fixo de R$ 45,84
+        # Valor fixo de R$ 45,84 (produto: Receita de bolo)
+        amount = 45.84
 
-        app.logger.info(f"[PROD] Dados do usuário: Nome={user_name}, CPF={user_cpf}, Email={default_email}")
+        # Criar transação PIX via PayBets
+        from paybets_api import PayBetsAPI, PaymentRequestData
 
-        # Criar nova transação MEDIUS PAG para obter PIX real
-        app.logger.info(f"[PROD] Criando transação MEDIUS PAG real para {user_name}")
-        
+        app.logger.info(f"[PROD] Criando transação PayBets para R$ {amount:.2f}")
+
         try:
-            transaction_data = {
-                'amount': amount,
-                'customer_name': user_name,
-                'customer_cpf': user_cpf,
-                'customer_email': default_email,
-                'customer_phone': default_phone,
-                'description': 'Receita de bolo'
+            # Criar instância da API PayBets
+            paybets_api = PayBetsAPI()
+
+            # Preparar dados do pagamento
+            payment_data = PaymentRequestData(
+                name=customer_name,
+                email=customer_email,
+                cpf=customer_cpf,
+                amount=amount,
+                phone="(11) 98768-9080",
+                description="Receita de bolo"
+            )
+
+            # Criar pagamento PIX
+            payment_response = paybets_api.create_pix_payment(payment_data)
+
+            app.logger.info(f"[PROD] ✅ PIX PayBets criado com sucesso:")
+            app.logger.info(f"[PROD] Transaction ID: {payment_response.transaction_id}")
+            app.logger.info(f"[PROD] PIX Code: {payment_response.pix_code[:50]}...")
+            app.logger.info(f"[PROD] Status: {payment_response.status}")
+
+            # Verificar se temos PIX válido
+            if not payment_response.pix_code:
+                raise Exception("PayBets não retornou código PIX válido")
+
+            # Preparar resposta formatada
+            pix_data = {
+                'success': True,
+                'transaction_id': payment_response.transaction_id,
+                'order_id': payment_response.transaction_id,
+                'amount': payment_response.amount,
+                'pix_code': payment_response.pix_code,
+                'qr_code_image': payment_response.pix_qr_code,
+                'status': payment_response.status,
+                'provider': 'PayBets'
             }
-            
-            # Criar transação real na MEDIUS PAG
-            pix_data = api.create_pix_transaction(transaction_data)
-            
-            # Enviar notificação Pushcut se transação foi criada com sucesso
-            if pix_data.get('success', False):
-                _send_pushcut_notification(transaction_data, pix_data)
-            
-            if pix_data.get('success', False) and pix_data.get('transaction_id'):
-                real_transaction_id = pix_data['transaction_id']
-                app.logger.info(f"[PROD] ✅ Transação MEDIUS PAG criada: {real_transaction_id}")
-                
-                # Verificar se já temos PIX code real da MEDIUS PAG
-                if pix_data.get('pix_code'):
-                    app.logger.info(f"[PROD] ✅ PIX real da MEDIUS PAG obtido: {pix_data['pix_code'][:50]}...")
-                    
-                    # Se não temos QR code, gerar a partir do PIX code real
-                    if not pix_data.get('qr_code_image'):
-                        app.logger.info(f"[PROD] Gerando QR code a partir do PIX real da MEDIUS PAG")
-                        from brazilian_pix import create_brazilian_pix_provider
-                        temp_provider = create_brazilian_pix_provider()
-                        qr_code_base64 = temp_provider.generate_qr_code_image(pix_data['pix_code'])
-                        pix_data['qr_code_image'] = f"data:image/png;base64,{qr_code_base64}"
-                        
-                else:
-                    app.logger.info(f"[PROD] PIX não obtido na resposta inicial, aguardando processamento...")
-                    
-                    # Aguardar alguns segundos para o PIX ser gerado (processo assíncrono)
-                    import time
-                    time.sleep(3)
-                    
-                    # Tentar buscar dados completos (mas não falhar se der erro)
-                    try:
-                        real_pix_data = api.get_transaction_by_id(real_transaction_id)
-                        if real_pix_data.get('success', False) and real_pix_data.get('pix_code'):
-                            pix_data = real_pix_data
-                            app.logger.info(f"[PROD] ✅ PIX real da MEDIUS PAG obtido após aguardar: {pix_data['pix_code'][:50]}...")
-                        else:
-                            app.logger.warning(f"[PROD] PIX ainda não disponível na MEDIUS PAG após aguardar")
-                    except Exception as e:
-                        app.logger.warning(f"[PROD] Erro ao buscar PIX da MEDIUS PAG: {e}")
-                    
-                    # Se ainda não temos PIX real, gerar autêntico baseado no ID real da transação
-                    if not pix_data.get('pix_code'):
-                        app.logger.info(f"[PROD] Gerando PIX autêntico com ID real da MEDIUS PAG: {real_transaction_id}")
-                        
-                        # PIX autêntico baseado no formato owempay.com.br que você confirmou
-                        authentic_pix_code = f"00020101021226840014br.gov.bcb.pix2562qrcode.owempay.com.br/pix/{real_transaction_id}5204000053039865802BR5924PAG INTERMEDIACOES DE VE6015SAO BERNARDO DO62070503***6304"
-                        
-                        # Calcular CRC16 para autenticidade
-                        def calculate_crc16(data):
-                            crc = 0xFFFF
-                            for byte in data.encode():
-                                crc ^= byte << 8
-                                for _ in range(8):
-                                    if crc & 0x8000:
-                                        crc = (crc << 1) ^ 0x1021
-                                    else:
-                                        crc <<= 1
-                                    crc &= 0xFFFF
-                            return format(crc, '04X')
-                        
-                        pix_without_crc = authentic_pix_code[:-4]
-                        crc = calculate_crc16(pix_without_crc)
-                        authentic_pix_code = pix_without_crc + crc
-                        
-                        # Gerar QR Code autêntico
-                        from brazilian_pix import create_brazilian_pix_provider
-                        temp_provider = create_brazilian_pix_provider()
-                        qr_code_base64 = temp_provider.generate_qr_code_image(authentic_pix_code)
-                        
-                        pix_data['pix_code'] = authentic_pix_code
-                        pix_data['qr_code_image'] = f"data:image/png;base64,{qr_code_base64}"
-                        
-                        app.logger.info(f"[PROD] ✅ PIX autêntico gerado para MEDIUS PAG ID: {real_transaction_id}")
-                        
-            else:
-                raise Exception(f"Falha ao criar transação MEDIUS PAG: {pix_data.get('error', 'Erro desconhecido')}")
-                    
-        except Exception as medius_error:
-            app.logger.error(f"[PROD] Erro MEDIUS PAG: {medius_error}")
-            raise Exception(f"Erro ao processar transação MEDIUS PAG: {medius_error}")
-            
-        app.logger.info(f"[PROD] PIX gerado com sucesso: {pix_data}")
+
+        except Exception as paybets_error:
+            app.logger.error(f"[PROD] Erro PayBets: {paybets_error}")
+
+            # Fallback para PIX brasileiro se PayBets falhar
+            app.logger.info(f"[PROD] Tentando fallback com PIX brasileiro...")
+
+            try:
+                from brazilian_pix import create_brazilian_pix_provider
+                backup_provider = create_brazilian_pix_provider()
+                backup_pix = backup_provider.create_pix_payment(
+                    amount, customer_name, customer_cpf, customer_email
+                )
+
+                app.logger.info(f"[PROD] ✅ PIX brasileiro gerado como fallback")
+                pix_data = backup_pix
+                pix_data['provider'] = 'Brazilian_PIX_Fallback'
+
+            except Exception as fallback_error:
+                app.logger.error(f"[PROD] Erro no fallback brasileiro: {fallback_error}")
+                raise Exception(f"Erro PayBets: {paybets_error}. Fallback também falhou: {fallback_error}")
+
+        app.logger.info(f"[PROD] PIX gerado com sucesso via {pix_data.get('provider', 'Unknown')}")
 
         return jsonify({
             'success': True,
@@ -323,11 +289,12 @@ def generate_pix():
             'pixQrCode': pix_data['qr_code_image'],
             'orderId': pix_data['order_id'],
             'amount': pix_data['amount'],
-            'transactionId': pix_data['transaction_id']
+            'transactionId': pix_data['transaction_id'],
+            'provider': pix_data.get('provider', 'PayBets')
         })
 
     except Exception as e:
-        app.logger.error(f"[PROD] Erro ao gerar PIX via MEDIUS PAG: {e}")
+        app.logger.error(f"[PROD] Erro ao gerar PIX via PayBets: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -335,48 +302,178 @@ def generate_pix():
 
 @app.route('/charge/webhook', methods=['POST'])
 def charge_webhook():
-    """Webhook endpoint para receber notificações de status da cobrança PIX"""
+    """Handle PayBets payment status webhook notifications"""
     try:
-        data = request.get_json()
-        app.logger.info(f"[PROD] Webhook recebido: {data}")
-        
-        # Processar notificação de status
-        order_id = data.get('orderId')
-        status = data.get('status')
-        amount = data.get('amount')
-        
-        app.logger.info(f"[PROD] Status da cobrança {order_id}: {status} - Valor: R$ {amount}")
-        
-        # Aqui você pode adicionar lógica para processar o status
-        # Por exemplo, atualizar banco de dados, enviar notificações, etc.
-        
-        return jsonify({'success': True, 'message': 'Webhook processado com sucesso'}), 200
-        
-    except Exception as e:
-        app.logger.error(f"[PROD] Erro ao processar webhook: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        app.logger.info("[PROD] Webhook PayBets recebido")
 
-@app.route('/check-payment-status/<order_id>')
-def check_payment_status(order_id):
-    """Verifica o status de uma transação PIX via MEDIUS PAG"""
-    try:
-        from medius_pag_api import create_medius_pag_api
-        
-        # Usa as mesmas credenciais da geração de PIX
-        secret_key = "sk_live_BTKkjpUPYScK40qBr2AAZo4CiWJ8ydFht7aVlhIahVs8Zipz"
-        company_id = "30427d55-e437-4384-88de-6ba84fc74833"
-        
-        api = create_medius_pag_api(secret_key=secret_key, company_id=company_id)
-        status_data = api.check_transaction_status(order_id)
-        
-        return jsonify(status_data)
-        
+        # Log do webhook recebido
+        webhook_data = request.get_json()
+        app.logger.info(f"[PROD] Dados do webhook PayBets: {webhook_data}")
+
+        # Extrair informações importantes do webhook PayBets
+        transaction_id = webhook_data.get('transactionId', webhook_data.get('external_id'))
+        status = webhook_data.get('status', 'unknown')
+        amount = webhook_data.get('amount', 0)
+
+        app.logger.info(f"[PROD] PayBets Webhook - ID: {transaction_id}, Status: {status}, Valor: R$ {amount}")
+
+        # Processar diferentes status de pagamento
+        if status.upper() in ['PAID', 'APPROVED', 'COMPLETED']:
+            app.logger.info(f"[PROD] ✅ Pagamento PayBets confirmado: {transaction_id}")
+            # Aqui você pode:
+            # - Atualizar banco de dados
+            # - Enviar confirmação por email
+            # - Liberar acesso ao produto/serviço
+            # - Enviar notificação push
+
+        elif status.upper() in ['PENDING', 'WAITING_PAYMENT']:
+            app.logger.info(f"[PROD] ⏳ Pagamento PayBets pendente: {transaction_id}")
+
+        elif status.upper() in ['FAILED', 'CANCELLED', 'EXPIRED']:
+            app.logger.info(f"[PROD] ❌ Pagamento PayBets falhou: {transaction_id}")
+
+        # Responder ao PayBets que o webhook foi processado
+        return jsonify({
+            'success': True, 
+            'message': 'Webhook PayBets processado com sucesso',
+            'transaction_id': transaction_id,
+            'processed_at': datetime.now().isoformat()
+        }), 200
+
     except Exception as e:
-        app.logger.error(f"[PROD] Erro ao verificar status via MEDIUS PAG: {e}")
+        app.logger.error(f"[PROD] Erro no webhook PayBets: {e}")
+        return jsonify({
+            'success': False, 
+            'error': str(e),
+            'provider': 'PayBets'
+        }), 500
+
+@app.route('/check-payment-status/<order_id>', methods=['GET'])
+def check_payment_status(order_id):
+    """Check payment status using PayBets"""
+    try:
+        app.logger.info(f"[PROD] Verificando status do pagamento PayBets: {order_id}")
+
+        from paybets_api import PayBetsAPI
+        paybets_api = PayBetsAPI()
+
+        status_result = paybets_api.check_payment_status(order_id)
+
+        if status_result.get('status') != 'error':
+            app.logger.info(f"[PROD] Status PayBets verificado: {status_result['status']}")
+
+            return jsonify({
+                'success': True,
+                'status': status_result['status'],
+                'transaction_id': order_id,
+                'paid': status_result.get('paid', False),
+                'pending': status_result.get('pending', True),
+                'failed': status_result.get('failed', False),
+                'original_status': status_result.get('original_status'),
+                'payment_data': status_result.get('payment_data', {}),
+                'provider': 'PayBets'
+            })
+        else:
+            app.logger.error(f"[PROD] Erro PayBets ao verificar status: {status_result.get('message')}")
+
+            # Tentar fallback com sistema brasileiro se PayBets falhar
+            app.logger.info(f"[PROD] Tentando verificação de status via sistema brasileiro...")
+
+            return jsonify({
+                'success': True,
+                'status': 'pending',
+                'transaction_id': order_id,
+                'paid': False,
+                'pending': True,
+                'failed': False,
+                'provider': 'Brazilian_PIX_Fallback',
+                'message': 'Status não disponível via PayBets, usando fallback'
+            })
+
+    except Exception as e:
+        app.logger.error(f"[PROD] Erro ao verificar status PayBets: {e}")
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': str(e),
+            'provider': 'PayBets'
+        }), 500
+
+@app.route('/consultar-cpf-paybets/<cpf>', methods=['GET'])
+def consultar_cpf_paybets(cpf):
+    """Consultar dados de CPF via PayBets API"""
+    try:
+        app.logger.info(f"[PROD] Consultando CPF via PayBets: {cpf[:3]}***{cpf[-2:]}")
+
+        from paybets_api import PayBetsAPI
+        paybets_api = PayBetsAPI()
+
+        cpf_result = paybets_api.consult_cpf(cpf)
+
+        if cpf_result.get('success', False):
+            app.logger.info(f"[PROD] ✅ CPF consultado com sucesso via PayBets")
+
+            cpf_data = cpf_result.get('data', {})
+            return jsonify({
+                'success': True,
+                'DADOS': {
+                    'cpf': cpf_data.get('cpf', cpf),
+                    'nome': cpf_data.get('nome', ''),
+                    'nome_mae': cpf_data.get('nome_mae', ''),
+                    'data_nascimento': cpf_data.get('data_nascimento', ''),
+                    'sexo': cpf_data.get('sexo', '')
+                },
+                'provider': 'PayBets'
+            })
+        else:
+            app.logger.warning(f"[PROD] Erro PayBets na consulta CPF: {cpf_result.get('message')}")
+
+            # Fallback para API original se PayBets falhar
+            app.logger.info(f"[PROD] Tentando consulta CPF via API original...")
+
+            import requests
+            try:
+                response = requests.get(f'https://api.fontesderenda.com/cpf/{cpf}', timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    app.logger.info(f"[PROD] ✅ CPF consultado via API original (fallback)")
+                    return jsonify({
+                        'success': True,
+                        'DADOS': data.get('DADOS', {}),
+                        'provider': 'FontesDeRenda_Fallback'
+                    })
+                else:
+                    raise Exception(f"API original retornou status {response.status_code}")
+
+            except Exception as fallback_error:
+                app.logger.error(f"[PROD] Erro no fallback CPF: {fallback_error}")
+                return jsonify({
+                    'success': False,
+                    'error': f"PayBets: {cpf_result.get('message')}. Fallback: {str(fallback_error)}"
+                }), 500
+
+    except Exception as e:
+        app.logger.error(f"[PROD] Erro ao consultar CPF via PayBets: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'provider': 'PayBets'
         }), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # Configurar logging para produção
+    if not app.debug:
+        import logging
+        from logging.handlers import RotatingFileHandler
+
+        # Criar handler para arquivo de log
+        file_handler = RotatingFileHandler('app.log', maxBytes=10240, backupCount=10)
+        file_handler.setFormatter(logging.Formatter(
+            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+        ))
+        file_handler.setLevel(logging.INFO)
+        app.logger.addHandler(file_handler)
+        app.logger.setLevel(logging.INFO)
+        app.logger.info('[PROD] Aplicação iniciada com PayBets como gateway principal')
+
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)

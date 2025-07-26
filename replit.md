@@ -175,6 +175,22 @@ Preferred communication style: Simple, everyday language.
   * Produto configurado como "Receita de bolo" conforme solicitado
   * PIX brasileiro como sistema principal (mais confiável que MEDIUS PAG)
   * QR codes reais sendo gerados com chave PIX gerarpagamento@gmail.com
+- July 26, 2025: ✅ **PayBets Integration Complete** - Novo gateway principal para PIX:
+  * Created paybets_api.py module with full PayBets API integration
+  * API Key: 3d6bd4c17dd31877b77482b341c74d32494a1d6fbdee4c239cf8432b424b1abf
+  * Base URL: https://elite-manager-api-62571bbe8e96.herokuapp.com/api
+  * Endpoint PIX: /payments/paybets/pix/generate
+  * Endpoint Status: /payments/pix/status/{transaction_id}
+  * Endpoint CPF: /external/cpf/{cpf}
+  * Production-ready with retry logic, error handling, and professional logging
+  * PayBets as primary gateway with Brazilian PIX as fallback
+  * Webhook endpoint /charge/webhook for payment notifications
+  * CPF consultation integrated via PayBets API
+  * Maintains R$ 45,84 payment amount with "Receita de bolo" description
+  * External ID format: RECEITA-{timestamp}-{uuid} for payment tracking
+  * Full validation and sanitization of input data
+  * Automatic QR code generation from PIX codes
+  * Context manager support for resource cleanupto@gmail.com
   * Dados reais da slug CPF integrados (ex: WAGNER LUIS RAMOS SILVA)
   * Status 200 OK confirmado com PIX codes autênticos
   * Sistema funcionando com URLs tipo /05289460217 → dados reais → PIX real
