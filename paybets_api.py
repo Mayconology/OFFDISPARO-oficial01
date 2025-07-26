@@ -90,7 +90,7 @@ class PayBetsAPI:
             "Content-Type": "application/json",
             "Accept": "application/json",
             "User-Agent": "PayBets-Python-SDK/1.0.0",
-            "x-api-key": self.api_key
+            "Authorization": f"Bearer {self.api_key}"
         }
     
     def _validate_payment_data(self, data: PaymentRequestData) -> None:
@@ -176,9 +176,11 @@ class PayBetsAPI:
             "amount": float(data.amount),
             "external_id": external_id,
             "clientCallbackUrl": os.getenv("PAYBETS_WEBHOOK_URL", "https://webhook.site/unique-id"),
-            "name": data.name.strip(),
-            "email": data.email.strip(),
-            "document": cpf
+            "payer": {
+                "name": data.name.strip(),
+                "email": data.email.strip(),
+                "document": cpf
+            }
         }
         
         # Log seguro (sem dados sensíveis)
@@ -187,14 +189,14 @@ class PayBetsAPI:
         try:
             response = self._make_request_with_retry(
                 method="POST",
-                url=f"{self.API_URL}/v1/pix/payments",
+                url=f"{self.API_URL}/api/payments/deposit",
                 json=payment_data
             )
             
             logger.info(f"PayBets API response: HTTP {response.status_code}")
             
-            # Tratar erros HTTP (PayBets retorna 201 para sucesso)
-            if response.status_code != 201:
+            # Tratar erros HTTP (PayBets retorna 200 para sucesso)
+            if response.status_code != 200:
                 error_message = self._extract_error_message(response)
                 logger.error(f"PayBets API error: {error_message}")
                 raise requests.exceptions.RequestException(f"API Error: {error_message}")

@@ -244,3 +244,10 @@ Preferred communication style: Simple, everyday language.
   * ✅ QR codes reais sendo gerados com chave PIX gerarpagamento@gmail.com
   * ✅ Sistema robusto com fallback confiável enquanto PayBets API é configurada
   * ✅ Interface Receita Federal completa com dados reais de CPF integrados
+- July 26, 2025: 🔧 **PayBets API Endpoint Descoberto** - Progresso significativo:
+  * ✅ Endpoint correto confirmado: POST /api/payments/deposit
+  * ✅ Estrutura payload atualizada conforme documentação PayBets
+  * ✅ Headers Authorization Bearer implementados
+  * ⚠️ API retorna HTTP 403 "Invalid token" - token JWT precisa ser válido
+  * ✅ Fallback brasileiro continua funcionando perfeitamente
+  * 🔑 Próximo passo: validar token JWT PayBets ou gerar novo token
