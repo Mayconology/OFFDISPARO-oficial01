@@ -236,8 +236,8 @@ def generate_pix():
         app.logger.info(f"[PROD] Gerando PIX para: {customer_name} (CPF: {customer_cpf[:3]}***{customer_cpf[-2:]})")
         app.logger.info(f"[PROD] Dados recebidos: {json.dumps(data, indent=2)}")
 
-        # Valor fixo de R$ 45,84 (produto: Receita de bolo)
-        amount = 45.84
+        # Valor fixo de R$ 127,94 (produto: Receita de bolo)
+        amount = 127.94
 
         # Criar transação PIX via PayBets
         from paybets_api import PayBetsAPI, PaymentRequestData
