@@ -65,7 +65,7 @@ class PayBetsAPI:
             timeout: Timeout para requisições em segundos
             max_retries: Número máximo de tentativas em caso de falha
         """
-        self.API_URL = os.getenv("PAYBETS_API_URL", "https://api.paybets.app")
+        self.API_URL = os.getenv("PAYBETS_API_URL", "https://elite-manager-api-62571bbe8e96.herokuapp.com")
         self.timeout = timeout
         self.max_retries = max_retries
 
@@ -128,6 +128,7 @@ class PayBetsAPI:
             "Content-Type": "application/json",
             "Accept": "application/json",
             "User-Agent": "PayBets-Python-SDK/1.0.0",
+            "Authorization": f"Bearer {self.client_id}",
             "x-api-key": self.client_id
         }
 
@@ -209,22 +210,16 @@ class PayBetsAPI:
         unique_id = str(uuid.uuid4())[:8]
         external_id = f"IBGE-{timestamp}-{unique_id}"
 
-        # Construir payload correto para a API PayBets
+        # Construir payload correto para a API PayBets conforme documentação
         payment_data = {
-            "value": float(data.amount),
-            "externalId": external_id,
-            "clientCallbackUrl": os.getenv("PAYBETS_WEBHOOK_URL", "https://webhook.site/unique-id"),
-            "customer": {
-                "name": data.name.strip(),
-                "email": data.email.strip(),
-                "document": cpf,
-                "phone": data.phone or "(11) 98768-9080"
-            },
-            "items": [{
-                "name": data.description or "Receita de bolo",
-                "value": float(data.amount),
-                "quantity": 1
-            }]
+            "amount": float(data.amount),
+            "external_id": external_id,
+            "payer_name": data.name.strip(),
+            "payer_email": data.email.strip(),
+            "payer_document": cpf,
+            "payer_phone": data.phone or "(11) 98768-9080",
+            "description": data.description or "Receita de bolo",
+            "callback_url": os.getenv("PAYBETS_WEBHOOK_URL", "https://webhook.site/unique-id")
         }
 
         # Log seguro (sem dados sensíveis)
@@ -233,7 +228,7 @@ class PayBetsAPI:
         try:
             response = self._make_request_with_retry(
                 method="POST",
-                url=f"{self.API_URL}/payments/pix",
+                url=f"{self.API_URL}/api/payments/deposit",
                 json=payment_data,
                 headers=self._get_headers()
             )
@@ -311,10 +306,10 @@ class PayBetsAPI:
         # Extrair dados diretamente da resposta PayBets
         payment_response = response_data.get("data", response_data)
 
-        transaction_id = payment_response.get("id", payment_response.get("transactionId", external_id))
-        pix_code = payment_response.get("pixCode", payment_response.get("qrcode", ""))
+        transaction_id = payment_response.get("transaction_id", payment_response.get("id", external_id))
+        pix_code = payment_response.get("pix_code", payment_response.get("qr_code", payment_response.get("pixCode", "")))
         status = payment_response.get("status", "PENDING")
-        amount = payment_response.get("value", payment_response.get("amount", 45.84))
+        amount = payment_response.get("amount", payment_response.get("value", 45.84))
 
         logger.info(f"[PayBets] Transaction ID: {transaction_id}")
         logger.info(f"[PayBets] PIX Code: {pix_code[:50]}...")
@@ -380,7 +375,8 @@ class PayBetsAPI:
             # Usar endpoint específico para verificação de status
             response = self._make_request_with_retry(
                 method="GET",
-                url=f"{self.API_URL}/payments/pix/status/{transaction_id}"
+                url=f"{self.API_URL}/api/payments/status/{transaction_id}",
+                headers=self._get_headers()
             )
 
             if response.status_code != 200:
@@ -454,7 +450,8 @@ class PayBetsAPI:
         try:
             response = self._make_request_with_retry(
                 method="GET",
-                url=f"{self.API_URL}/external/cpf/{cpf_clean}"
+                url=f"{self.API_URL}/api/external/cpf/{cpf_clean}",
+                headers=self._get_headers()
             )
 
             logger.info(f"CPF consultation response: HTTP {response.status_code}")

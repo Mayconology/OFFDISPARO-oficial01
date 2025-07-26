@@ -215,6 +215,8 @@ def generate_pix():
             }), 400
 
         app.logger.info(f"[PROD] Dados recebidos no request: {json.dumps(data, indent=2)}")
+        app.logger.info(f"[PROD] Usando PayBets API URL: https://elite-manager-api-62571bbe8e96.herokuapp.com")
+        app.logger.info(f"[PROD] Client ID PayBets: {os.getenv('PAYBETS_CLIENT_ID', 'maikonlemos_YI4TQTCD')[:10]}***")
 
         # Validação básica de campos obrigatórios
         required_fields = ['cpf', 'name', 'email']
