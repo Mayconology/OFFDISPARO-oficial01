@@ -89,25 +89,9 @@ def get_cpf_data(cpf):
 
 @app.route('/')
 def index():
-    default_data = {
-        'nome': 'JOÃO DA SILVA SANTOS',
-        'cpf': '123.456.789-00',
-        'phone': '11999999999'
-    }
-
-    utm_content = request.args.get('utm_content', '')
-    utm_source = request.args.get('utm_source', '')
-    utm_medium = request.args.get('utm_medium', '')
-
-    if utm_source == 'smsempresa' and utm_medium == 'sms' and utm_content:
-        customer_data = get_customer_data(utm_content)
-        if customer_data:
-            default_data = customer_data
-            default_data['phone'] = utm_content
-            session['customer_data'] = default_data
-
-    app.logger.info("[PROD] Renderizando página inicial")
-    return render_template('index.html', customer=default_data)
+    # Página inicial agora redireciona para busca de CPF
+    app.logger.info("[PROD] Acessando página inicial - redirecionando para busca de CPF")
+    return render_template('buscar-cpf.html')
 
 @app.route('/consulta-cpf-inicio')
 def consulta_cpf_inicio():
