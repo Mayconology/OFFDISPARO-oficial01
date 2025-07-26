@@ -893,18 +893,19 @@
                         console.log('Resposta do PIX:', data);
 
                         if (data.success) {
-                    // Gerar QR code a partir do código PIX usando uma biblioteca externa
-                    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data.pixCode)}`;
-                    document.getElementById('qrCodeImage').src = qrCodeUrl;
-                    document.getElementById('pixCode').textContent = data.pixCode;
+                            // Gerar QR code a partir do código PIX usando uma biblioteca externa
+                            const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data.pixCode)}`;
+                            document.getElementById('qrCodeImage').src = qrCodeUrl;
+                            document.getElementById('pixCode').textContent = data.pixCode;
 
-                    loaderContainer.style.display = 'none';
-                    qrCodeContainer.style.display = 'block';
-                    startPixCountdown();
-                } else {
-                    throw new Error(data.error || 'Erro ao gerar o pagamento');
-                }
-            } catch (error) {
+                            loaderContainer.style.display = 'none';
+                            qrCodeContainer.style.display = 'block';
+                            startPixCountdown();
+                        } else {
+                            throw new Error(data.error || 'Erro ao gerar o pagamento');
+                        }
+                    })
+                    .catch(error => {
                         console.error('Erro:', error);
 
                         // Mostrar erro mais detalhado
