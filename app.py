@@ -170,8 +170,13 @@ def noticia():
         'phone': '11999999999'
     })
     
+    # Add current date for consistency
+    from datetime import datetime
+    customer_data['today_date'] = datetime.now().strftime("%d/%m/%Y")
+    
     app.logger.info(f"[PROD] Acessando página de notícia com dados: {customer_data.get('nome', 'N/A')}")
-    return render_template('index.html', customer=customer_data)
+    # Pass show_confirmation=False to show the news section instead of confirmation form
+    return render_template('index.html', customer=customer_data, show_confirmation=False)
 
 @app.route('/generate-pix', methods=['POST'])
 def generate_pix():
