@@ -505,11 +505,14 @@ def consultar_cpf_paybets(cpf):
 
 if __name__ == '__main__':
     # Configurar logging para produção
-    if not app.debug:
-        import logging
-        from logging.handlers import RotatingFileHandler
-
-        # Criar handler para arquivo de log
+    import logging
+    from logging.handlers import RotatingFileHandler
+    
+    # Detectar se está em produção
+    is_production = os.environ.get('ENVIRONMENT') == 'production' or os.environ.get('PORT') is not None
+    
+    if is_production:
+        # Configuração para produção
         file_handler = RotatingFileHandler('app.log', maxBytes=10240, backupCount=10)
         file_handler.setFormatter(logging.Formatter(
             '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
@@ -517,7 +520,11 @@ if __name__ == '__main__':
         file_handler.setLevel(logging.INFO)
         app.logger.addHandler(file_handler)
         app.logger.setLevel(logging.INFO)
-        app.logger.info('[PROD] Aplicação iniciada com PayBets como gateway principal')
+        app.logger.info('[PROD] Aplicação iniciada em produção com PayBets')
+    else:
+        app.logger.setLevel(logging.DEBUG)
+        app.logger.info('[DEV] Aplicação iniciada em desenvolvimento')
 
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    debug_mode = not is_production
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)
