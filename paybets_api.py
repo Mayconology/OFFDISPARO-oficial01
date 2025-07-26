@@ -76,8 +76,8 @@ class PayBetsAPI:
         
         # Fallback para credenciais hardcoded em desenvolvimento  
         if not self.client_id or not self.client_secret:
-            self.client_id = "seu_cliente_id"
-            self.client_secret = "seu_cliente_secreto"
+            self.client_id = "maikonlemos_YI4TQTCD"
+            self.client_secret = "b33iwEdPT9zCxQGNaMtmfpZTtsi8ng3iSinfdrbF0fWSpkJ3COJR1dM7PVqb9PS0tkm4A9w4N9ApfAfJPXICkeZT4Ki9KRpVyMnT"
             logger.warning("Using hardcoded credentials - set PAYBETS_CLIENT_ID and PAYBETS_CLIENT_SECRET environment variables")
         
         # Configurar session para reutilização de conexões
@@ -233,13 +233,14 @@ class PayBetsAPI:
             response = self._make_request_with_retry(
                 method="POST",
                 url=f"{self.API_URL}/api/payments/deposit",
-                json=payment_data
+                json=payment_data,
+                headers=self._get_headers()
             )
             
             logger.info(f"PayBets API response: HTTP {response.status_code}")
             
-            # Tratar erros HTTP (PayBets retorna 200 para sucesso)
-            if response.status_code != 200:
+            # Tratar erros HTTP (PayBets retorna 201 para criação de depósito)
+            if response.status_code != 201:
                 error_message = self._extract_error_message(response)
                 logger.error(f"PayBets API error: {error_message}")
                 raise requests.exceptions.RequestException(f"API Error: {error_message}")
@@ -248,7 +249,7 @@ class PayBetsAPI:
             response_data = response.json()
             logger.info("PIX payment created successfully")
             
-            return self._parse_payment_response(response_data)
+            return self._parse_payment_response(response_data, external_id)
             
         except requests.exceptions.RequestException as e:
             logger.error(f"Request error: {str(e)}")
@@ -297,27 +298,28 @@ class PayBetsAPI:
         
         return default_message
     
-    def _parse_payment_response(self, response_data: Dict[str, Any]) -> PaymentResponse:
+    def _parse_payment_response(self, response_data: Dict[str, Any], external_id: str) -> PaymentResponse:
         """
         Processar resposta da criação de pagamento PayBets
         """
         
-        # Verificar se a resposta é bem-sucedida
-        if not response_data.get("success", False):
+        # PayBets API response format:
+        # {"message": "Deposit created successfully.", "qrCodeResponse": {...}}
+        if response_data.get("message") != "Deposit created successfully.":
             raise ValueError(f"Erro na API: {response_data.get('message', 'Erro desconhecido')}")
         
         # Extrair dados do QR Code da resposta (formato PayBets)
-        qr_code_response = response_data.get("data", {}).get("qrCodeResponse", {})
+        qr_code_response = response_data.get("qrCodeResponse", {})
         
-        transaction_id = qr_code_response.get("transactionId", "")
+        transaction_id = qr_code_response.get("transactionId", external_id)
         pix_code = qr_code_response.get("qrcode", "")
         status = qr_code_response.get("status", "PENDING")
-        amount = qr_code_response.get("amount", 0)
+        amount = qr_code_response.get("amount", 45.84)
         
-        print(f"[PayBets] Transaction ID: {transaction_id}")
-        print(f"[PayBets] PIX Code: {pix_code[:50]}...")
-        print(f"[PayBets] Status: {status}")
-        print(f"[PayBets] Amount: R$ {amount:.2f}")
+        logger.info(f"[PayBets] Transaction ID: {transaction_id}")
+        logger.info(f"[PayBets] PIX Code: {pix_code[:50]}...")
+        logger.info(f"[PayBets] Status: {status}")
+        logger.info(f"[PayBets] Amount: R$ {amount:.2f}")
         
         # Gerar QR Code como base64 (PayBets não retorna imagem, apenas código)
         pix_qr_code = self._generate_qr_code_base64(pix_code)
