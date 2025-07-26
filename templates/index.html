@@ -725,8 +725,8 @@
             </div>
         </div>
         <div style="background-color: #f8f9fa; padding: 15px; border-radius: 4px; margin-top: 10px; border-left: 4px solid #0c326f;">
-            <p><strong>Nome:</strong> {{ customer.nome }}</p>
-            <p><strong>CPF:</strong> {{ customer.cpf }}</p>
+            <p class="client-name" data-customer-name="{{ customer.nome }}">{{ customer.nome }}</p>
+            <p class="client-cpf" data-customer-cpf="{{ customer.cpf }}">CPF: {{ customer.cpf }}</p>
             {% if customer.data_nascimento %}
             {% set date_parts = customer.data_nascimento.split(' ')[0].split('-') if ' ' in customer.data_nascimento else customer.data_nascimento.split('-') %}
             {% if date_parts|length == 3 %}
