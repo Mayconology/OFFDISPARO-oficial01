@@ -56,12 +56,13 @@ class PayBetsAPI:
     Production-ready implementation
     """
     
-    def __init__(self, api_key: Optional[str] = None, timeout: int = 30, max_retries: int = 3):
+    def __init__(self, client_id: Optional[str] = None, client_secret: Optional[str] = None, timeout: int = 30, max_retries: int = 3):
         """
-        Inicializar a API PayBets com configuração para produção
+        Inicializar a API PayBets com autenticação OAuth
         
         Args:
-            api_key: Chave de API (se None, busca em variável de ambiente)
+            client_id: ID do cliente PayBets
+            client_secret: Secret do cliente PayBets  
             timeout: Timeout para requisições em segundos
             max_retries: Número máximo de tentativas em caso de falha
         """
@@ -69,28 +70,70 @@ class PayBetsAPI:
         self.timeout = timeout
         self.max_retries = max_retries
         
-        # Configurar chave de API
-        self.api_key = api_key or os.getenv("PAYBETS_API_KEY")
-        if not self.api_key:
-            # Fallback para chave hardcoded em desenvolvimento
-            self.api_key = "3d6bd4c17dd31877b77482b341c74d32494a1d6fbdee4c239cf8432b424b1abf"
-            logger.warning("Using hardcoded API key - set PAYBETS_API_KEY environment variable for production")
+        # Configurar credenciais OAuth
+        self.client_id = client_id or os.getenv("PAYBETS_CLIENT_ID")
+        self.client_secret = client_secret or os.getenv("PAYBETS_CLIENT_SECRET")
+        
+        # Fallback para credenciais hardcoded em desenvolvimento  
+        if not self.client_id or not self.client_secret:
+            self.client_id = "seu_cliente_id"
+            self.client_secret = "seu_cliente_secreto"
+            logger.warning("Using hardcoded credentials - set PAYBETS_CLIENT_ID and PAYBETS_CLIENT_SECRET environment variables")
         
         # Configurar session para reutilização de conexões
         self.session = requests.Session()
-        self.session.headers.update(self._get_headers())
+        self.jwt_token = None
+        
+        # Autenticar automaticamente e obter token JWT
+        self._authenticate()
         
         logger.info(f"PayBets API initialized - URL: {self.API_URL}")
         
+    def _authenticate(self) -> None:
+        """
+        Autenticar na API PayBets e obter token JWT
+        """
+        try:
+            auth_payload = {
+                "client_id": self.client_id,
+                "client_secret": self.client_secret
+            }
+            
+            response = requests.post(
+                f"{self.API_URL}/api/auth/login",
+                json=auth_payload,
+                headers={
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+                timeout=self.timeout
+            )
+            
+            if response.status_code == 200:
+                auth_data = response.json()
+                self.jwt_token = auth_data.get("token")
+                logger.info("PayBets authentication successful")
+            else:
+                logger.error(f"PayBets authentication failed: HTTP {response.status_code}")
+                logger.error(f"Response: {response.text}")
+                raise Exception("Authentication failed")
+                
+        except Exception as e:
+            logger.error(f"Authentication error: {str(e)}")
+            raise
+    
     def _get_headers(self) -> Dict[str, str]:
         """
         Headers padrão para as requisições HTTP
         """
+        if not self.jwt_token:
+            raise Exception("No JWT token available - authentication required")
+            
         return {
             "Content-Type": "application/json",
             "Accept": "application/json",
             "User-Agent": "PayBets-Python-SDK/1.0.0",
-            "Authorization": f"Bearer {self.api_key}"
+            "Authorization": f"Bearer {self.jwt_token}"
         }
     
     def _validate_payment_data(self, data: PaymentRequestData) -> None:

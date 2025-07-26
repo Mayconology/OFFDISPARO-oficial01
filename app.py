@@ -226,7 +226,10 @@ def generate_pix():
 
         try:
             # Criar instância da API PayBets
-            paybets_api = PayBetsAPI()
+            paybets_api = PayBetsAPI(
+                client_id=os.getenv("PAYBETS_CLIENT_ID"),
+                client_secret=os.getenv("PAYBETS_CLIENT_SECRET")
+            )
 
             # Preparar dados do pagamento
             payment_data = PaymentRequestData(
