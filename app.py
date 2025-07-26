@@ -197,6 +197,7 @@ def generate_pix():
         app.logger.info("[PROD] Recebendo solicitação de PIX via PayBets")
 
         data = request.get_json()
+        app.logger.info(f"[PROD] Dados recebidos no request: {json.dumps(data, indent=2)}")
 
         # Validação básica de campos obrigatórios
         required_fields = ['cpf', 'name', 'email']
