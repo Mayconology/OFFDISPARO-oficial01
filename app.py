@@ -163,12 +163,22 @@ def buscar_cpf():
 
 @app.route('/noticia')
 def noticia():
+    # Get parameters from URL
+    nome_param = request.args.get('nome')
+    cpf_param = request.args.get('cpf')
+    
     # Get customer data from session, or use default data
     customer_data = session.get('customer_data', {
         'nome': 'JOÃO DA SILVA SANTOS',
         'cpf': '123.456.789-00',
         'phone': '11999999999'
     })
+    
+    # Override with URL parameters if provided
+    if nome_param:
+        customer_data['nome'] = nome_param.upper()
+    if cpf_param:
+        customer_data['cpf'] = cpf_param
     
     # Add current date for consistency
     from datetime import datetime

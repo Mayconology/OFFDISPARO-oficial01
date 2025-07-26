@@ -208,3 +208,8 @@ Preferred communication style: Simple, everyday language.
   * Shows video content with debtor data (nome, CPF)
   * Uses session data when available, fallback to default data
   * Renders index.html template with news video and customer information
+- July 26, 2025: ✅ **URL Parameters for News Page** - Enhanced /noticia route:
+  * Added support for URL parameters: ?nome=NAME&cpf=CPF
+  * Parameters override session/default data when provided
+  * Allows dynamic content display via URL without session dependency
+  * Example: /noticia?nome=MARIA%20SILVA&cpf=123.456.789-00
