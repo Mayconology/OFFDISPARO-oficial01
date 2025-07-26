@@ -65,7 +65,7 @@ class PayBetsAPI:
             timeout: Timeout para requisições em segundos
             max_retries: Número máximo de tentativas em caso de falha
         """
-        self.API_URL = os.getenv("PAYBETS_API_URL", "https://elite-manager-api-62571bbe8e96.herokuapp.com/api")
+        self.API_URL = os.getenv("PAYBETS_API_URL", "https://elite-manager-api-62571bbe8e96.herokuapp.com")
         self.timeout = timeout
         self.max_retries = max_retries
         
@@ -195,7 +195,7 @@ class PayBetsAPI:
         try:
             response = self._make_request_with_retry(
                 method="POST",
-                url=f"{self.API_URL}/payments/pix",
+                url=f"{self.API_URL}/api/pix/generate",
                 json=payment_data
             )
             

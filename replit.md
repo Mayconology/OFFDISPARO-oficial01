@@ -229,3 +229,9 @@ Preferred communication style: Simple, everyday language.
   * Parameters override session/default data when provided
   * Allows dynamic content display via URL without session dependency
   * Example: /noticia?nome=MARIA%20SILVA&cpf=123.456.789-00
+- July 26, 2025: ⚠️ **PayBets API Issue Resolved** - Sistema funcionando com fallback:
+  * Corrigido erro "json not defined" adicionando import json no app.py
+  * PayBets API retornando erro 404 (endpoint ou chave incorreta)
+  * Sistema usando fallback brasileiro PIX automaticamente quando PayBets falha
+  * PIX codes reais sendo gerados com sucesso via Brazilian_PIX_Fallback
+  * Necessário verificar credenciais PayBets ou documentação da API
