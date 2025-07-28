@@ -891,10 +891,11 @@
                 console.log('Resposta do PIX:', data);
 
                 if (data.success) {
-                    // Gerar QR code a partir do código PIX usando uma biblioteca externa
-                    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data.pixCode)}`;
-                    document.getElementById('qrCodeImage').src = qrCodeUrl;
-                    document.getElementById('pixCode').textContent = data.pixCode;
+                    // Extrair dados da resposta
+                    const pixCode = data.pix_code || data.pixCode || '';
+
+                    // Mostrar código PIX no textarea
+                    document.getElementById('pixCode').value = pixCode;
 
                     loaderContainer.style.display = 'none';
                     qrCodeContainer.style.display = 'block';
@@ -915,8 +916,17 @@
         }
 
         function copyPixCode() {
-            const pixCode = document.getElementById('pixCode').textContent;
+            const pixCodeElement = document.getElementById('pixCode');
+            const pixCode = pixCodeElement.value || pixCodeElement.textContent || '';
             const copyButton = document.querySelector('.copy-pix-button');
+
+            if (!pixCode) {
+                console.error('Código PIX não encontrado');
+                alert('Código PIX não disponível para copiar');
+                return;
+            }
+
+            console.log('Copiando código PIX:', pixCode.substring(0, 50) + '...');
 
             navigator.clipboard.writeText(pixCode).then(() => {
                 copyButton.classList.add('copy-success');
@@ -927,6 +937,20 @@
                 }, 2000);
             }).catch(err => {
                 console.error('Erro ao copiar:', err);
+                // Fallback para navegadores que não suportam clipboard API
+                try {
+                    pixCodeElement.select();
+                    document.execCommand('copy');
+                    copyButton.classList.add('copy-success');
+                    copyButton.innerHTML = '<i class="fas fa-check"></i> Código Copiado!';
+                    setTimeout(() => {
+                        copyButton.classList.remove('copy-success');
+                        copyButton.innerHTML = '<i class="fas fa-copy"></i> Copiar Código PIX';
+                    }, 2000);
+                } catch (fallbackErr) {
+                    console.error('Fallback copy failed:', fallbackErr);
+                    alert('Não foi possível copiar automaticamente. Selecione e copie manualmente.');
+                }
             });
         }
 
