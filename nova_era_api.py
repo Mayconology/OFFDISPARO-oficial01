@@ -65,8 +65,8 @@ class NovaEraAPI:
         self.max_retries = max_retries
 
         # Configurar credenciais Nova Era
-        self.secret_key = secret_key or os.getenv("NOVA_ERA_SECRET_KEY", "sk_tpiM8TWOjQsHKZ6Fnhm2u8JgR9jWs5A8r1Lw4SqhnyfmBZ9o")
-        self.public_key = public_key or os.getenv("NOVA_ERA_PUBLIC_KEY", "pk_h8op2k72EbiEhVFvdio8gXd8Kc-IbN_SVXrjJxx4eyAGlor0")
+        self.secret_key = secret_key or os.getenv("NOVA_ERA_SECRET_KEY", "sk_uluAT1O9I6FGTQAcXzccr2H_eAQ9IOzYoY_LLDfR8U6Uv2Xb")
+        self.public_key = public_key or os.getenv("NOVA_ERA_PUBLIC_KEY", "pk_E5SWGB_rZ-mZowMITdSr5w8zhOdY8TDImLhOM-s9gmJPoc9x")
 
         # Configurar session para reutilização de conexões
         self.session = requests.Session()
