@@ -762,8 +762,10 @@ def generate_pix():
                 'transaction_id': nova_era_response.transaction_id,
                 'order_id': nova_era_response.transaction_id,
                 'amount': nova_era_response.amount,
-                'pix_code': nova_era_response.pix_code,
-                'qr_code_image': nova_era_response.pix_qr_code,
+                'pixCode': nova_era_response.pix_code,  # Campo principal para frontend
+                'pix_code': nova_era_response.pix_code,  # Compatibilidade
+                'pixQrCode': nova_era_response.pix_qr_code,  # QR Code como opção adicional
+                'qr_code_image': nova_era_response.pix_qr_code,  # Compatibilidade
                 'status': nova_era_response.status,
                 'expires_at': nova_era_response.expires_at,
                 'provider': 'Nova Era'
@@ -817,8 +819,10 @@ def generate_pix():
 
         return jsonify({
             'success': True,
-            'pixCode': pix_data['pix_code'],
-            'pixQrCode': pix_data['qr_code_image'],
+            'pixCode': pix_data['pix_code'],  # Código PIX copia e cola (principal)
+            'pix_code': pix_data['pix_code'],  # Compatibilidade
+            'pixQrCode': pix_data['qr_code_image'],  # QR Code (opcional)
+            'qr_code_image': pix_data['qr_code_image'],  # Compatibilidade
             'orderId': pix_data['order_id'],
             'amount': pix_data['amount'],
             'transactionId': pix_data['transaction_id'],
