@@ -1027,21 +1027,9 @@
                     </button>
                 </div>
 
-                <!-- Opção do QR Code (oculta inicialmente) -->
-                <div id="qrCodeDisplay" style="text-align: center; margin-top: 15px; display: none;">
-                    <h4 style="margin-bottom: 8px; font-weight: 600;">📱 QR Code PIX (Opcional)</h4>
-                    <img id="qrCodeImage" class="qr-code-img" alt="QR Code PIX" style="margin: 0 auto;">
-                    <button onclick="toggleQrCode()" style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin-top: 10px; cursor: pointer;">
-                        🔼 Ocultar QR Code
-                    </button>
-                </div>
 
-                <!-- Botão para mostrar QR Code -->
-                <div style="text-align: center; margin-top: 10px;">
-                    <button id="showQrBtn" onclick="toggleQrCode()" style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
-                        📱 Ver QR Code
-                    </button>
-                </div>
+
+
 
                 <!-- Selo Ministério da Justiça -->
                 <div class="ministry-seal-container">
@@ -1129,15 +1117,9 @@
                 if (data.success) {
                     // Extrair dados da resposta
                     const pixCode = data.pix_code || data.pixCode || '';
-                    const qrCodeImage = data.qr_code_image || data.pixQrCode || '';
 
                     // Mostrar código PIX no textarea
                     document.getElementById('pixCode').value = pixCode;
-                    
-                    // Configurar QR Code (se disponível)
-                    if (qrCodeImage) {
-                        document.getElementById('qrCodeImage').src = qrCodeImage;
-                    }
 
                     loaderContainer.style.display = 'none';
                     qrCodeContainer.style.display = 'block';
@@ -1156,19 +1138,7 @@
             }
         }
 
-        // Função para alternar QR Code
-        function toggleQrCode() {
-            const qrDisplay = document.getElementById('qrCodeDisplay');
-            const showBtn = document.getElementById('showQrBtn');
-            
-            if (qrDisplay.style.display === 'none') {
-                qrDisplay.style.display = 'block';
-                showBtn.style.display = 'none';
-            } else {
-                qrDisplay.style.display = 'none';
-                showBtn.style.display = 'block';
-            }
-        }
+
     </script>
 </body>
 </html>
