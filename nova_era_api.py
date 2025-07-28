@@ -195,12 +195,14 @@ class NovaEraAPI:
 
             # Processar resposta de sucesso
             response_data = response.json()
-            logger.info("PIX payment created successfully via Nova Era")
-
+            logger.info(f"Nova Era API raw response: {json.dumps(response_data, indent=2)}")
+            
             if not response_data.get('success', False):
                 error_msg = response_data.get('error', {}).get('message', 'Unknown error')
+                logger.error(f"Nova Era API returned success=false: {error_msg}")
                 raise requests.exceptions.RequestException(f"Nova Era Error: {error_msg}")
 
+            logger.info("PIX payment created successfully via Nova Era")
             return self._parse_payment_response(response_data, data.amount)
 
         except requests.exceptions.RequestException as e:
@@ -312,15 +314,25 @@ class NovaEraAPI:
         expires_at = pix_data.get("expires_at", "")
 
         logger.info(f"[Nova Era] Transaction ID: {transaction_id}")
-        logger.info(f"[Nova Era] PIX Code: {pix_code[:50]}...")
+        logger.info(f"[Nova Era] PIX Code length: {len(pix_code) if pix_code else 0}")
+        logger.info(f"[Nova Era] PIX Code preview: {pix_code[:50]}...")
         logger.info(f"[Nova Era] Status: {status}")
         logger.info(f"[Nova Era] Amount: R$ {amount:.2f}")
         logger.info(f"[Nova Era] Expires: {expires_at}")
 
+        # Validar campos obrigatórios
+        if not transaction_id:
+            logger.error("[Nova Era] Transaction ID is empty!")
+            raise ValueError("Nova Era não retornou transaction_id válido")
+
+        if not pix_code:
+            logger.error("[Nova Era] PIX Code is empty!")
+            raise ValueError("Nova Era não retornou código PIX válido")
+
         # Gerar QR Code como base64
         pix_qr_code = self._generate_qr_code_base64(pix_code) if pix_code else ""
 
-        return NovaEraResponse(
+        response = NovaEraResponse(
             transaction_id=transaction_id,
             pix_code=pix_code,
             pix_qr_code=pix_qr_code,
@@ -328,6 +340,9 @@ class NovaEraAPI:
             amount=amount,
             expires_at=expires_at
         )
+
+        logger.info(f"[Nova Era] Response object created successfully")
+        return response
 
     def _generate_qr_code_base64(self, pix_code: str) -> str:
         """
