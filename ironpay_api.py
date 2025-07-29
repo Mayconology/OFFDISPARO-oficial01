@@ -96,9 +96,9 @@ class IronPayAPI:
             
         amount_cents = int(data.amount * 100)  # Iron Pay usa centavos
         
-        # Gerar hashes únicos para produtos e ofertas
-        product_hash = f"prod_{uuid.uuid4().hex[:10]}"
-        offer_hash = f"offer_{uuid.uuid4().hex[:5]}"
+        # Iron Pay: usar hashes específicos da conta do usuário
+        product_hash = "jrddtst9rp"  # Hash do produto fornecido pelo usuário
+        offer_hash = "vduc64lrsq"    # Hash da oferta fornecido pelo usuário
         
         # Preparar payload conforme documentação Iron Pay
         payment_data = {
@@ -120,14 +120,25 @@ class IronPayAPI:
             "cart": [{
                 "product_hash": product_hash,
                 "title": data.description,
+                "cover": None,
                 "price": amount_cents,
                 "quantity": 1,
                 "operation_type": 1,
-                "tangible": False
+                "tangible": False,
+                "product_id": 6561,  # ID fixo conforme documentação
+                "offer_id": 9535     # ID fixo conforme documentação
             }],
             "installments": 1,
             "expire_in_days": 1,
-            "transaction_origin": "api"
+            "transaction_origin": "api",
+            "tracking": {
+                "src": "",
+                "utm_source": "",
+                "utm_medium": "",
+                "utm_campaign": "",
+                "utm_term": "",
+                "utm_content": ""
+            }
         }
         
         logger.info(f"🔄 Criando PIX Iron Pay - Valor: R${data.amount:.2f}, Cliente: {data.name}")
@@ -135,7 +146,7 @@ class IronPayAPI:
         try:
             # Fazer requisição para Iron Pay API real
             response = self.session.post(
-                f"{self.API_URL}/public/v1/transactions",
+                f"{self.API_URL}/api/public/v1/transactions",
                 params={"api_token": self.api_token},
                 json=payment_data,
                 timeout=self.timeout,
@@ -151,8 +162,9 @@ class IronPayAPI:
                 
                 # Extrair dados da resposta conforme documentação Iron Pay
                 transaction_hash = response_data.get("hash")
-                pix_code = response_data.get("pix_code")
-                pix_qr_code = response_data.get("pix_qr_code")
+                pix_data = response_data.get("pix", {})
+                pix_code = pix_data.get("pix_qr_code", "")
+                pix_qr_code = pix_data.get("pix_qr_code", "")
                 
                 if not transaction_hash:
                     raise Exception("Iron Pay não retornou hash da transação")
