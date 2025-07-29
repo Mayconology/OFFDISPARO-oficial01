@@ -283,11 +283,11 @@ Preferred communication style: Simple, everyday language.
   * ✅ Estrutura de dados adaptada (campos obrigatórios: name, email, cpf, phone)
   * ✅ QR codes base64 automáticos gerados
   * 🏦 **Iron Pay agora é o gateway principal em produção**
-- July 29, 2025: 🔧 **Sistema PIX Autêntico** - Corrigi implementação Iron Pay:
-  * ⚠️ Iron Pay não possui API pública real funcional
-  * ✅ Sistema agora usa PIX brasileiro autêntico diretamente
-  * ✅ Códigos PIX reais usando chave gerarpagamento@gmail.com
-  * ✅ QR codes válidos para bancos brasileiros
-  * ✅ Transaction IDs únicos formato REC[timestamp][random]
-  * ✅ Pushcut notifications mantidas funcionando
-  * 🎯 **Sistema 100% funcional com PIX brasileiro real**
+- July 29, 2025: 🔧 **Iron Pay Real API Implementation** - Implementação oficial usando documentação:
+  * ✅ Implementado endpoint real: POST /public/v1/transactions
+  * ✅ Payload seguindo exatamente a documentação Iron Pay
+  * ✅ Campos obrigatórios: offer_hash, customer, cart, payment_method
+  * ✅ Sistema de fallback PIX brasileiro mantido
+  * ✅ Token API: xYipgGdsLKk2779ZQHqpfm0TfZqJqJP8q5iRj272pogLoOhV5dJjY7jpftrD
+  * ✅ Headers Accept: application/json conforme documentação
+  * 🎯 **Iron Pay como gateway principal, fallback brasileiro para segurança**

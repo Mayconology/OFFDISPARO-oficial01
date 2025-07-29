@@ -56,8 +56,6 @@ class IronPayAPI:
             timeout: Timeout para requisições em segundos
             max_retries: Número máximo de tentativas em caso de falha
         """
-        # Nota: Iron Pay não possui API pública documentada
-        # Esta implementação usa simulação para demonstração
         self.API_URL = "https://ironpayapp.com.br"
         self.timeout = timeout
         self.max_retries = max_retries
@@ -135,23 +133,51 @@ class IronPayAPI:
         logger.info(f"🔄 Criando PIX Iron Pay - Valor: R${data.amount:.2f}, Cliente: {data.name}")
         
         try:
-            # Iron Pay não possui API pública documentada
-            # Gerar resposta simulada compatível com sistema existente
-            logger.warning("⚠️ Iron Pay API não disponível publicamente, gerando PIX simulado")
-            
-            transaction_hash = f"iron_{uuid.uuid4().hex[:10]}"
-            pix_code = self._generate_pix_code_simulation(data.amount, transaction_hash)
-            qr_code_base64 = self._generate_qr_code_base64(pix_code)
-            
-            logger.info(f"✅ PIX Iron Pay simulado gerado: {transaction_hash}")
-            
-            return IronPaymentResponse(
-                transaction_hash=transaction_hash,
-                pix_code=pix_code,
-                pix_qr_code=qr_code_base64,
-                status="pending",
-                amount=data.amount
+            # Fazer requisição para Iron Pay API real
+            response = self.session.post(
+                f"{self.API_URL}/public/v1/transactions",
+                params={"api_token": self.api_token},
+                json=payment_data,
+                timeout=self.timeout,
+                headers={"Accept": "application/json"}
             )
+            
+            logger.info(f"📡 Iron Pay Response: HTTP {response.status_code}")
+            logger.info(f"📡 Iron Pay Response Body: {response.text[:500]}...")
+            
+            if response.status_code in [200, 201]:
+                response_data = response.json()
+                logger.info(f"✅ Iron Pay Success: {response_data}")
+                
+                # Extrair dados da resposta conforme documentação Iron Pay
+                transaction_hash = response_data.get("hash")
+                pix_code = response_data.get("pix_code")
+                pix_qr_code = response_data.get("pix_qr_code")
+                
+                if not transaction_hash:
+                    raise Exception("Iron Pay não retornou hash da transação")
+                
+                # Se não tem QR code na resposta, gerar a partir do PIX code
+                if pix_code and not pix_qr_code:
+                    pix_qr_code = self._generate_qr_code_base64(pix_code)
+                
+                return IronPaymentResponse(
+                    transaction_hash=transaction_hash,
+                    pix_code=pix_code or "",
+                    pix_qr_code=pix_qr_code or "",
+                    status=response_data.get("status", "pending"),
+                    amount=data.amount
+                )
+            else:
+                error_msg = f"Iron Pay API error: HTTP {response.status_code}"
+                try:
+                    error_data = response.json()
+                    error_msg += f" - {error_data}"
+                except:
+                    error_msg += f" - {response.text}"
+                
+                logger.error(f"❌ {error_msg}")
+                raise Exception(error_msg)
                 
         except requests.exceptions.RequestException as e:
             logger.error(f"❌ Iron Pay connection error: {e}")
