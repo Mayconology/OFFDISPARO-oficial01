@@ -228,6 +228,7 @@ def generate_pix():
         # Tentar Iron Pay API primeiro
         try:
             app.logger.info("[PROD] Tentando gerar PIX via Iron Pay...")
+            app.logger.info(f"[PROD] Token configurado: {bool(os.getenv('IRONPAY_API_TOKEN'))}")
 
             iron_pay_api = create_iron_pay_provider()
 
@@ -239,6 +240,8 @@ def generate_pix():
                 amount=amount,
                 description="Receita de bolo"
             )
+
+            app.logger.info(f"[PROD] Dados do pagamento Iron Pay: {payment_data}")
 
             iron_pay_response = iron_pay_api.create_pix_payment(payment_data)
 
@@ -272,7 +275,10 @@ def generate_pix():
             })
 
         except Exception as e:
-            app.logger.warning(f"[PROD] Iron Pay falhou: {str(e)}")
+            app.logger.error(f"[PROD] Iron Pay falhou: {str(e)}")
+            app.logger.error(f"[PROD] Iron Pay erro completo: {type(e).__name__}: {str(e)}")
+            import traceback
+            app.logger.error(f"[PROD] Iron Pay traceback: {traceback.format_exc()}")
             app.logger.info("[PROD] Tentando fallback para PIX brasileiro...")
 
             # Fallback para PIX brasileiro autêntico
