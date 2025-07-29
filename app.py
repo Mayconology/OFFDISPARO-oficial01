@@ -8,7 +8,7 @@ import string
 import logging
 import base64
 import uuid
-from real_pix_api import create_real_pix_provider
+from ironpay_api import create_iron_pay_provider, IronPaymentData
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
@@ -225,14 +225,13 @@ def generate_pix():
 
         app.logger.info(f"[PROD] Valor do pagamento configurado: R$ {amount:.2f}")
 
-        # Tentar Nova Era API primeiro
+        # Tentar Iron Pay API primeiro
         try:
-            app.logger.info("[PROD] Tentando gerar PIX via Nova Era...")
+            app.logger.info("[PROD] Tentando gerar PIX via Iron Pay...")
 
-            from nova_era_api import NovaEraAPI, NovaEraPaymentData
-            nova_era_api = NovaEraAPI()
+            iron_pay_api = create_iron_pay_provider()
 
-            payment_data = NovaEraPaymentData(
+            payment_data = IronPaymentData(
                 name=customer_name,
                 email="gerarpagamento@gmail.com",
                 cpf=customer_cpf,
@@ -241,26 +240,39 @@ def generate_pix():
                 description="Receita de bolo"
             )
 
-            nova_era_response = nova_era_api.create_pix_payment(payment_data)
+            iron_pay_response = iron_pay_api.create_pix_payment(payment_data)
 
-            app.logger.info(f"[PROD] ✅ Nova Era PIX gerado com sucesso: {nova_era_response.transaction_id}")
+            app.logger.info(f"[PROD] ✅ Iron Pay PIX gerado com sucesso: {iron_pay_response.transaction_hash}")
+
+            # Enviar notificação Pushcut
+            transaction_data = {
+                'customer_name': customer_name,
+                'amount': amount,
+                'cpf': customer_cpf
+            }
+            
+            pix_data = {
+                'transaction_id': iron_pay_response.transaction_hash,
+                'amount': amount
+            }
+            
+            _send_pushcut_notification(transaction_data, pix_data)
 
             return jsonify({
                 'success': True,
-                'transaction_id': nova_era_response.transaction_id,
-                'order_id': nova_era_response.transaction_id,
-                'amount': nova_era_response.amount,
-                'pixCode': nova_era_response.pix_code,  # Campo principal para frontend
-                'pix_code': nova_era_response.pix_code,  # Compatibilidade
-                'pixQrCode': nova_era_response.pix_qr_code,  # QR Code como opção adicional
-                'qr_code_image': nova_era_response.pix_qr_code,  # Compatibilidade
-                'status': nova_era_response.status,
-                'expires_at': nova_era_response.expires_at,
-                'provider': 'Nova Era'
+                'transaction_id': iron_pay_response.transaction_hash,
+                'order_id': iron_pay_response.transaction_hash,
+                'amount': iron_pay_response.amount,
+                'pixCode': iron_pay_response.pix_code,  # Campo principal para frontend
+                'pix_code': iron_pay_response.pix_code,  # Compatibilidade
+                'pixQrCode': iron_pay_response.pix_qr_code,  # QR Code como opção adicional
+                'qr_code_image': iron_pay_response.pix_qr_code,  # Compatibilidade
+                'status': iron_pay_response.status,
+                'provider': 'Iron Pay'
             })
 
         except Exception as e:
-            app.logger.warning(f"[PROD] Nova Era falhou: {str(e)}")
+            app.logger.warning(f"[PROD] Iron Pay falhou: {str(e)}")
             app.logger.info("[PROD] Tentando fallback para PIX brasileiro...")
 
             # Fallback para PIX brasileiro autêntico
@@ -314,51 +326,50 @@ def generate_pix():
             'orderId': pix_data['order_id'],
             'amount': pix_data['amount'],
             'transactionId': pix_data['transaction_id'],
-            'provider': pix_data.get('provider', 'Nova Era')
+            'provider': pix_data.get('provider', 'Iron Pay')
         })
 
     except Exception as e:
-        app.logger.error(f"[PROD] Erro ao gerar PIX via Nova Era: {e}")
+        app.logger.error(f"[PROD] Erro ao gerar PIX via Iron Pay: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
         }), 500
 
-@app.route('/nova-era/webhook', methods=['POST'])
-def webhook_nova_era():
-    """Webhook para receber notificações de pagamento da Nova Era"""
+@app.route('/iron-pay/webhook', methods=['POST'])
+def webhook_iron_pay():
+    """Webhook para receber notificações de pagamento da Iron Pay"""
     try:
         webhook_data = request.get_json()
-        app.logger.info(f"[PROD] Webhook Nova Era recebido: {json.dumps(webhook_data, indent=2)}")
+        app.logger.info(f"[PROD] Webhook Iron Pay recebido: {json.dumps(webhook_data, indent=2)}")
 
-        # Extrair informações do webhook Nova Era
-        event = webhook_data.get('event', '')
-        transaction_data = webhook_data.get('data', {})
-        transaction_id = transaction_data.get('id', '')
-        status = transaction_data.get('status', 'unknown')
+        # Extrair informações do webhook Iron Pay
+        transaction_hash = webhook_data.get('hash', webhook_data.get('transaction_hash', ''))
+        status = webhook_data.get('status', 'unknown')
+        amount = webhook_data.get('amount', 0)
+        customer_data = webhook_data.get('customer', {})
 
-        app.logger.info(f"[PROD] Webhook Nova Era - Event: {event}, Transaction: {transaction_id}, Status: {status}")
+        app.logger.info(f"[PROD] Webhook Iron Pay - Transaction: {transaction_hash}, Status: {status}")
 
-        if event == 'transaction.paid' or status == 'paid':
-            app.logger.info(f"[PROD] ✅ Pagamento Nova Era confirmado: {transaction_id}")
-        elif event in ['transaction.failed', 'transaction.expired', 'transaction.cancelled']:
-            app.logger.info(f"[PROD] ❌ Pagamento Nova Era falhou: {transaction_id} - {event}")
+        if status.lower() in ['paid', 'approved', 'completed']:
+            app.logger.info(f"[PROD] ✅ Pagamento Iron Pay confirmado: {transaction_hash}")
+        elif status.lower() in ['failed', 'cancelled', 'expired', 'refunded']:
+            app.logger.info(f"[PROD] ❌ Pagamento Iron Pay falhou: {transaction_hash} - {status}")
 
-        # Responder à Nova Era que o webhook foi processado
+        # Responder à Iron Pay que o webhook foi processado
         return jsonify({
             'success': True, 
-            'message': 'Webhook Nova Era processado com sucesso',
-            'event': event,
-            'transaction_id': transaction_id,
+            'message': 'Webhook Iron Pay processado com sucesso',
+            'transaction_hash': transaction_hash,
             'processed_at': datetime.now().isoformat()
         }), 200
 
     except Exception as e:
-        app.logger.error(f"[PROD] Erro no webhook Nova Era: {e}")
+        app.logger.error(f"[PROD] Erro no webhook Iron Pay: {e}")
         return jsonify({
             'success': False, 
             'error': str(e),
-            'provider': 'Nova Era'
+            'provider': 'Iron Pay'
         }), 500
 
 @app.route('/charge/webhook', methods=['POST'])
@@ -401,27 +412,26 @@ def check_payment_status(transaction_id):
     try:
         app.logger.info(f"[PROD] Verificando status de pagamento: {transaction_id}")
 
-        # Tentar Nova Era primeiro
+        # Tentar Iron Pay primeiro
         try:
-            from nova_era_api import NovaEraAPI
-            nova_era_api = NovaEraAPI()
-            result = nova_era_api.check_payment_status(transaction_id)
+            iron_pay_api = create_iron_pay_provider()
+            result = iron_pay_api.check_payment_status(transaction_id)
 
-            app.logger.info(f"[PROD] Status Nova Era: {result.get('status')}")
+            app.logger.info(f"[PROD] Status Iron Pay: {result.get('status')}")
 
             return jsonify({
                 'success': True,
                 'status': result.get('status', 'pending'),
                 'paid': result.get('paid', False),
-                'pending': result.get('pending', True),
-                'failed': result.get('failed', False),
+                'pending': result.get('status', 'pending') == 'pending',
+                'failed': result.get('status', 'pending') == 'failed',
                 'amount': result.get('amount', 0),
-                'paid_at': result.get('paid_at'),
-                'provider': 'Nova Era'
+                'transaction_hash': result.get('transaction_hash', transaction_id),
+                'provider': 'Iron Pay'
             })
 
         except Exception as e:
-            app.logger.warning(f"[PROD] Erro Nova Era status: {str(e)}")
+            app.logger.warning(f"[PROD] Erro Iron Pay status: {str(e)}")
 
             # Para demonstração, sempre retorna pending
             return jsonify({
