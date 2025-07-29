@@ -291,3 +291,14 @@ Preferred communication style: Simple, everyday language.
   * ✅ Token API: xYipgGdsLKk2779ZQHqpfm0TfZqJqJP8q5iRj272pogLoOhV5dJjY7jpftrD
   * ✅ Headers Accept: application/json conforme documentação
   * 🎯 **Iron Pay como gateway principal, fallback brasileiro para segurança**
+- July 29, 2025: 🎉 **Iron Pay Integration SUCCESS** - Gateway 100% funcional em produção:
+  * ✅ Endpoint correto descoberto: /api/public/v1/transactions (com /api/ no path)
+  * ✅ Usando hashes reais da conta: product_hash=jrddtst9rp, offer_hash=vduc64lrsq
+  * ✅ PIX codes autênticos gerados (ex: 00020101021226840014br.gov.bcb.pix)
+  * ✅ Transaction hashes reais da Iron Pay (ex: cltaxbmp3r, h0tgkd1fp5)
+  * ✅ HTTP 201 responses com dados completos da transação
+  * ✅ Sistema testado com usuário real: NATALINO DONIZETE BARBOSA (CPF: 027.552.248-27)
+  * ✅ Frontend funcionando: botão regularizar → PIX gerado → código copiado
+  * ✅ Pushcut notifications enviadas com sucesso
+  * ✅ Documentação completa criada (IRON_PAY_DOCUMENTATION.md) para reutilização
+  * 🏦 **Iron Pay é o gateway principal em produção, sistema 100% operacional**
