@@ -56,7 +56,7 @@ class IronPayAPI:
             timeout: Timeout para requisições em segundos
             max_retries: Número máximo de tentativas em caso de falha
         """
-        self.API_URL = "https://ironpayapp.com.br"
+        self.API_URL = "https://api.ironpayapp.com.br"
         self.timeout = timeout
         self.max_retries = max_retries
         
