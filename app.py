@@ -225,28 +225,19 @@ def generate_pix():
 
         app.logger.info(f"[PROD] Valor do pagamento configurado: R$ {amount:.2f}")
 
-        # Tentar Iron Pay API primeiro
+        # Usar PIX brasileiro autêntico diretamente (Iron Pay não possui API real)
+        app.logger.info("[PROD] Gerando PIX brasileiro autêntico com chave real")
+
+        # Gerar PIX brasileiro autêntico
         try:
-            app.logger.info("[PROD] Tentando gerar PIX via Iron Pay...")
-            app.logger.info(f"[PROD] Token configurado: {bool(os.getenv('IRONPAY_API_TOKEN'))}")
-
-            iron_pay_api = create_iron_pay_provider()
-
-            payment_data = IronPaymentData(
-                name=customer_name,
-                email="gerarpagamento@gmail.com",
-                cpf=customer_cpf,
-                phone="(11) 98768-9080",
-                amount=amount,
-                description="Receita de bolo"
+            from brazilian_pix import create_brazilian_pix_provider
+            backup_provider = create_brazilian_pix_provider()
+            backup_pix = backup_provider.create_pix_payment(
+                amount, customer_name, customer_cpf, customer_email
             )
 
-            app.logger.info(f"[PROD] Dados do pagamento Iron Pay: {payment_data}")
-
-            iron_pay_response = iron_pay_api.create_pix_payment(payment_data)
-
-            app.logger.info(f"[PROD] ✅ Iron Pay PIX gerado com sucesso: {iron_pay_response.transaction_hash}")
-
+            app.logger.info(f"[PROD] ✅ PIX brasileiro autêntico gerado com sucesso")
+            
             # Enviar notificação Pushcut
             transaction_data = {
                 'customer_name': customer_name,
@@ -254,86 +245,32 @@ def generate_pix():
                 'cpf': customer_cpf
             }
             
-            pix_data = {
-                'transaction_id': iron_pay_response.transaction_hash,
+            pix_data_for_pushcut = {
+                'transaction_id': backup_pix['transaction_id'],
                 'amount': amount
             }
             
-            _send_pushcut_notification(transaction_data, pix_data)
-
+            _send_pushcut_notification(transaction_data, pix_data_for_pushcut)
+            
             return jsonify({
                 'success': True,
-                'transaction_id': iron_pay_response.transaction_hash,
-                'order_id': iron_pay_response.transaction_hash,
-                'amount': iron_pay_response.amount,
-                'pixCode': iron_pay_response.pix_code,  # Campo principal para frontend
-                'pix_code': iron_pay_response.pix_code,  # Compatibilidade
-                'pixQrCode': iron_pay_response.pix_qr_code,  # QR Code como opção adicional
-                'qr_code_image': iron_pay_response.pix_qr_code,  # Compatibilidade
-                'status': iron_pay_response.status,
-                'provider': 'Iron Pay'
+                'transaction_id': backup_pix['transaction_id'],
+                'order_id': backup_pix['order_id'],
+                'amount': backup_pix['amount'],
+                'pixCode': backup_pix['pix_code'],  # Campo principal para frontend
+                'pix_code': backup_pix['pix_code'],  # Compatibilidade
+                'pixQrCode': backup_pix['qr_code_image'],  # QR Code como opção adicional
+                'qr_code_image': backup_pix['qr_code_image'],  # Compatibilidade
+                'status': backup_pix['status'],
+                'provider': 'Brazilian_PIX_Authentic'
             })
 
-        except Exception as e:
-            app.logger.error(f"[PROD] Iron Pay falhou: {str(e)}")
-            app.logger.error(f"[PROD] Iron Pay erro completo: {type(e).__name__}: {str(e)}")
-            import traceback
-            app.logger.error(f"[PROD] Iron Pay traceback: {traceback.format_exc()}")
-            app.logger.info("[PROD] Tentando fallback para PIX brasileiro...")
-
-            # Fallback para PIX brasileiro autêntico
-
-            try:
-                from brazilian_pix import create_brazilian_pix_provider
-                backup_provider = create_brazilian_pix_provider()
-                backup_pix = backup_provider.create_pix_payment(
-                    amount, customer_name, customer_cpf, customer_email
-                )
-
-                app.logger.info(f"[PROD] ✅ PIX brasileiro gerado como fallback")
-                pix_data = {
-                    'success': True,
-                    'transaction_id': backup_pix['transaction_id'],
-                    'order_id': backup_pix['order_id'],
-                    'amount': backup_pix['amount'],
-                    'pix_code': backup_pix['pix_code'],
-                    'qr_code_image': backup_pix['qr_code_image'],
-                    'status': backup_pix['status'],
-                    'provider': 'Brazilian_PIX_Fallback'
-                }
-
-            except Exception as fallback_error:
-                app.logger.error(f"[PROD] Erro no fallback brasileiro: {fallback_error}")
-
-                # Último fallback: gerar PIX simulado básico
-                app.logger.info(f"[PROD] Gerando PIX simulado como último recurso...")
-
-                transaction_id = f"SIM-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
-
-                pix_data = {
-                    'success': True,
-                    'transaction_id': transaction_id,
-                    'order_id': transaction_id,
-                    'amount': amount,
-                    'pix_code': f"00020126580014BR.GOV.BCB.PIX0136{customer_email}52040000530398654{len(str(int(amount*100))):02d}{int(amount*100)}5802BR6014RECEITA BRASIL6008BRASILIA62070503{transaction_id[-3:]}6304",
-                    'qr_code_image': "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
-                    'status': 'pending',
-                    'provider': 'Simulated_PIX'
-                }
-
-        app.logger.info(f"[PROD] PIX gerado com sucesso via {pix_data.get('provider', 'Unknown')}")
-
-        return jsonify({
-            'success': True,
-            'pixCode': pix_data['pix_code'],  # Código PIX copia e cola (principal)
-            'pix_code': pix_data['pix_code'],  # Compatibilidade
-            'pixQrCode': pix_data['qr_code_image'],  # QR Code (opcional)
-            'qr_code_image': pix_data['qr_code_image'],  # Compatibilidade
-            'orderId': pix_data['order_id'],
-            'amount': pix_data['amount'],
-            'transactionId': pix_data['transaction_id'],
-            'provider': pix_data.get('provider', 'Iron Pay')
-        })
+        except Exception as fallback_error:
+            app.logger.error(f"[PROD] Erro no PIX brasileiro: {fallback_error}")
+            return jsonify({
+                'success': False,
+                'error': f'Erro ao gerar PIX: {str(fallback_error)}'
+            }), 500
 
     except Exception as e:
         app.logger.error(f"[PROD] Erro ao gerar PIX via Iron Pay: {e}")

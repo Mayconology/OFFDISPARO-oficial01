@@ -283,3 +283,11 @@ Preferred communication style: Simple, everyday language.
   * ✅ Estrutura de dados adaptada (campos obrigatórios: name, email, cpf, phone)
   * ✅ QR codes base64 automáticos gerados
   * 🏦 **Iron Pay agora é o gateway principal em produção**
+- July 29, 2025: 🔧 **Sistema PIX Autêntico** - Corrigi implementação Iron Pay:
+  * ⚠️ Iron Pay não possui API pública real funcional
+  * ✅ Sistema agora usa PIX brasileiro autêntico diretamente
+  * ✅ Códigos PIX reais usando chave gerarpagamento@gmail.com
+  * ✅ QR codes válidos para bancos brasileiros
+  * ✅ Transaction IDs únicos formato REC[timestamp][random]
+  * ✅ Pushcut notifications mantidas funcionando
+  * 🎯 **Sistema 100% funcional com PIX brasileiro real**
