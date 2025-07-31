@@ -606,22 +606,25 @@
             
             console.log('=== ROLAGEM CORRIGIDA 2025 ===');
             
-            // Calcular posição exata do botão
+            // Calcular posição para manter o botão sempre visível
             const buttonRect = regularizeButton.getBoundingClientRect();
             const buttonTopFromDocument = buttonRect.top + window.pageYOffset;
             const windowHeight = window.innerHeight;
+            const buttonHeight = buttonRect.height;
             
-            // Calcular onde rolar para mostrar o botão no final da tela
-            const scrollTarget = buttonTopFromDocument - windowHeight + buttonRect.height + 50;
+            // Rolar para manter o botão visível na parte inferior da tela
+            const targetScroll = buttonTopFromDocument - windowHeight + buttonHeight + 100;
             
             console.log(`Posição do botão: ${buttonTopFromDocument}px`);
             console.log(`Altura da janela: ${windowHeight}px`);
-            console.log(`Vai rolar para: ${scrollTarget}px`);
+            console.log(`Altura do botão: ${buttonHeight}px`);
+            console.log(`Rolagem para manter botão visível: ${targetScroll}px`);
             
-            // Rolar para a posição calculada
-            window.scrollTo({
-                top: Math.max(0, scrollTarget),
-                behavior: 'smooth'
+            // Usar scrollIntoView para garantir que o botão fique visível
+            regularizeButton.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'end',
+                inline: 'nearest'
             });
             
             console.log('=== ROLAGEM EXECUTADA ===');
