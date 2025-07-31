@@ -576,6 +576,15 @@
             
             // Mostrar botão de regularizar
             document.getElementById('regularizeButton').style.display = 'block';
+            
+            // Rolagem automática para mostrar o botão
+            await new Promise(resolve => setTimeout(resolve, 300));
+            const regularizeButton = document.getElementById('regularizeButton');
+            regularizeButton.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center',
+                inline: 'nearest'
+            });
         }
 
         // Função para redirecionar para a página de notícia com os dados do usuário
