@@ -578,37 +578,22 @@
             const regularizeButton = document.getElementById('regularizeButton');
             regularizeButton.style.display = 'block';
             
-            // Aguardar o botão ficar visível e fazer rolagem automática PARA BAIXO
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // Aguardar o botão ficar visível
+            await new Promise(resolve => setTimeout(resolve, 300));
             
-            console.log('Rolando para baixo para mostrar o botão...');
+            console.log('Executando rolagem para baixo - mostrando botão...');
             
-            // Rolar para baixo até o botão ficar visível
-            regularizeButton.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'end',  // Garante que o elemento fique na parte inferior da tela
-                inline: 'nearest'
+            // Método direto: rolar para o final da página
+            const pageHeight = document.documentElement.scrollHeight;
+            const viewportHeight = window.innerHeight;
+            const targetScroll = pageHeight - viewportHeight;
+            
+            window.scrollTo({
+                top: targetScroll,
+                behavior: 'smooth'
             });
             
-            // Garantir que toda a seção de débitos e botão fique visível
-            setTimeout(() => {
-                console.log('Ajustando rolagem para mostrar conteúdo completo...');
-                
-                // Encontrar o container dos débitos para garantir que tudo fique visível
-                const debtContainer = document.getElementById('debtCalculationContainer');
-                if (debtContainer) {
-                    debtContainer.scrollIntoView({ 
-                        behavior: 'smooth', 
-                        block: 'nearest',
-                        inline: 'nearest'
-                    });
-                }
-                
-                // Ajuste final para mobile - garantir espaço extra na parte inferior
-                setTimeout(() => {
-                    window.scrollBy(0, 100); // Rola mais 100px para baixo
-                }, 500);
-            }, 800);
+            console.log(`Rolando para posição: ${targetScroll}, altura da página: ${pageHeight}`);
         }
 
         // Função para redirecionar para a página de notícia com os dados do usuário
