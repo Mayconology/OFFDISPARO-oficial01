@@ -1114,37 +1114,48 @@
         }
 
         function showFiscalAnalysisLoading() {
-            const userInfoContainer = document.querySelector('.user-info');
+            console.log('Iniciando análise fiscal...');
+            
+            // Encontrar a segunda user-info (a que contém DADOS DO DEVEDOR)
+            const userInfos = document.querySelectorAll('.user-info');
+            const debtorInfo = userInfos[userInfos.length - 1]; // A última user-info
+            
+            if (!debtorInfo) {
+                console.error('Não foi possível encontrar a seção de dados do devedor');
+                return;
+            }
             
             // Criar container de loading fiscal
             const loadingContainer = document.createElement('div');
             loadingContainer.id = 'fiscalAnalysisLoading';
-            loadingContainer.style.marginTop = '20px';
+            loadingContainer.style.cssText = 'margin-top: 20px; background-color: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #003472;';
             loadingContainer.innerHTML = `
-                <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #003472;">
-                    <h4 style="color: #003472; margin-bottom: 15px; display: flex; align-items: center;">
-                        <i class="fas fa-search" style="margin-right: 10px; animation: spin 1s linear infinite;"></i>
-                        Analisando Situação Fiscal...
-                    </h4>
-                    <p style="margin-bottom: 20px; color: #495057;">
-                        Verificando débitos nos sistemas da Receita Federal. Aguarde...
-                    </p>
-                    
-                    <div id="yearAnalysisContainer">
-                        <!-- Anos serão adicionados dinamicamente -->
-                    </div>
-                    
-                    <div id="totalAnalysisContainer" style="display: none; margin-top: 20px; padding: 15px; background: linear-gradient(135deg, #dc3545, #c82333); color: white; border-radius: 6px; text-align: center;">
-                        <h5 style="margin: 0 0 8px 0;">TOTAL IDENTIFICADO</h5>
-                        <div id="totalValue" style="font-size: 24px; font-weight: 800;">R$ 0,00</div>
-                    </div>
+                <h4 style="color: #003472; margin-bottom: 15px; display: flex; align-items: center;">
+                    <i class="fas fa-search" style="margin-right: 10px; animation: spin 1s linear infinite;"></i>
+                    Analisando Situação Fiscal...
+                </h4>
+                <p style="margin-bottom: 20px; color: #495057;">
+                    Verificando débitos nos sistemas da Receita Federal. Aguarde...
+                </p>
+                
+                <div id="yearAnalysisContainer">
+                    <!-- Anos serão adicionados dinamicamente -->
+                </div>
+                
+                <div id="totalAnalysisContainer" style="display: none; margin-top: 20px; padding: 15px; background: linear-gradient(135deg, #dc3545, #c82333); color: white; border-radius: 6px; text-align: center;">
+                    <h5 style="margin: 0 0 8px 0;">TOTAL IDENTIFICADO</h5>
+                    <div id="totalValue" style="font-size: 24px; font-weight: 800;">R$ 0,00</div>
                 </div>
             `;
             
-            // Inserir após a message-box
-            const messageBox = document.querySelector('.message-box');
+            // Inserir após a message-box na seção de dados do devedor
+            const messageBox = debtorInfo.querySelector('.message-box');
             if (messageBox) {
+                console.log('Inserindo loading após message-box');
                 messageBox.parentNode.insertBefore(loadingContainer, messageBox.nextSibling);
+            } else {
+                console.log('Inserindo loading no final da seção devedor');
+                debtorInfo.appendChild(loadingContainer);
             }
             
             // Começar análise por anos
@@ -1154,11 +1165,28 @@
         function startYearByYearAnalysis() {
             const years = [2021, 2022, 2023, 2024];
             const yearContainer = document.getElementById('yearAnalysisContainer');
+            const targetTotal = 127.94;
             let currentTotal = 0;
+            const yearValues = [];
+            
+            // Distribuir o total de R$ 127,94 entre os anos
+            for (let i = 0; i < years.length; i++) {
+                if (i === years.length - 1) {
+                    // Último ano recebe o restante
+                    yearValues[i] = targetTotal - currentTotal;
+                } else {
+                    // Distribuir aleatoriamente entre 20-40 reais
+                    const amount = Math.random() * 20 + 20;
+                    yearValues[i] = Math.min(amount, targetTotal - currentTotal - (years.length - i - 1) * 15);
+                    currentTotal += yearValues[i];
+                }
+            }
+            
+            currentTotal = 0; // Reset para display progressivo
             
             years.forEach((year, index) => {
                 setTimeout(() => {
-                    analyzeYear(year, yearContainer, (amount) => {
+                    analyzeYear(year, yearContainer, yearValues[index], (amount) => {
                         currentTotal += amount;
                         updateTotalDisplay(currentTotal);
                         
@@ -1173,16 +1201,17 @@
             });
         }
 
-        function analyzeYear(year, container, callback) {
+        function analyzeYear(year, container, totalAmount, callback) {
+            console.log(`Analisando ano ${year} com valor total: R$ ${totalAmount.toFixed(2)}`);
+            
             // Criar elemento do ano
             const yearElement = document.createElement('div');
             yearElement.style.cssText = 'margin-bottom: 12px; padding: 15px; background: white; border: 1px solid #dee2e6; border-radius: 6px;';
             
-            // Gerar valores realistas baseados no ano
-            const baseAmount = Math.random() * 40 + 15; // Entre 15 e 55
-            const multa = baseAmount * (Math.random() * 0.2 + 0.1); // 10-30%
-            const juros = baseAmount * (Math.random() * 0.1 + 0.05); // 5-15%
-            const total = baseAmount + multa + juros;
+            // Distribuir o valor total em componentes realistas
+            const baseAmount = totalAmount * (0.6 + Math.random() * 0.2); // 60-80% principal
+            const multa = totalAmount * (0.1 + Math.random() * 0.15); // 10-25% multa
+            const juros = totalAmount - baseAmount - multa; // Restante para juros
             
             yearElement.innerHTML = `
                 <div style="background: linear-gradient(135deg, #003472, #0056b3); color: white; padding: 10px; margin: -15px -15px 15px -15px; border-radius: 6px 6px 0 0;">
@@ -1198,7 +1227,7 @@
                             <div><strong>Principal:</strong> <span style="color: #dc3545;">R$ ${baseAmount.toFixed(2)}</span></div>
                             <div><strong>Multas:</strong> <span style="color: #dc3545;">R$ ${multa.toFixed(2)}</span></div>
                             <div><strong>Juros:</strong> <span style="color: #dc3545;">R$ ${juros.toFixed(2)}</span></div>
-                            <div><strong>Total:</strong> <span style="color: #dc3545; font-weight: 700;">R$ ${total.toFixed(2)}</span></div>
+                            <div><strong>Total:</strong> <span style="color: #dc3545; font-weight: 700;">R$ ${totalAmount.toFixed(2)}</span></div>
                         </div>
                     </div>
                 </div>
@@ -1230,7 +1259,7 @@
                             details.style.display = 'block';
                             
                             // Callback com o valor total
-                            callback(total);
+                            callback(totalAmount);
                         }, 800);
                     }
                 }, stepIndex * 600);
