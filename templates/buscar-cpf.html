@@ -552,12 +552,27 @@
 
             for (let debt of debts) {
                 // Mostrar análise do ano
-                document.getElementById(debt.id).style.display = 'block';
+                const debtElement = document.getElementById(debt.id);
+                debtElement.style.display = 'block';
+                
+                // Rolar para mostrar o item atual
+                console.log(`=== ROLAGEM CONTÍNUA - ANO ${debt.year} ===`);
+                debtElement.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
+                
                 await new Promise(resolve => setTimeout(resolve, 1500));
 
                 // Definir valor final direto (sem animação gamificada)
                 const valueElement = document.getElementById(debt.valueId);
                 valueElement.textContent = `R$ ${debt.amount.toFixed(2).replace('.', ',')}`;
+                
+                // Rolar novamente para garantir visibilidade após valor aparecer
+                debtElement.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
                 
                 await new Promise(resolve => setTimeout(resolve, 800));
                 totalAmount += debt.amount;
@@ -565,7 +580,15 @@
 
             // Mostrar resultado total
             await new Promise(resolve => setTimeout(resolve, 1000));
-            document.getElementById('totalDebt').style.display = 'block';
+            const totalDebtElement = document.getElementById('totalDebt');
+            totalDebtElement.style.display = 'block';
+            
+            // Rolar para mostrar o total
+            console.log('=== ROLAGEM CONTÍNUA - TOTAL ===');
+            totalDebtElement.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center' 
+            });
             
             // Definir total final (127,94)
             const totalElement = document.getElementById('totalValue');
