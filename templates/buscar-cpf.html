@@ -578,22 +578,35 @@
             const regularizeButton = document.getElementById('regularizeButton');
             regularizeButton.style.display = 'block';
             
-            // Aguardar o botão ficar visível
-            await new Promise(resolve => setTimeout(resolve, 300));
+            // Aguardar o DOM atualizar com o botão visível
+            await new Promise(resolve => setTimeout(resolve, 100));
             
             console.log('Executando rolagem para baixo - mostrando botão...');
             
-            // Método direto: rolar para o final da página
-            const pageHeight = document.documentElement.scrollHeight;
+            // Forçar recálculo da altura da página após o botão aparecer
+            document.body.style.height = 'auto';
+            const pageHeight = Math.max(
+                document.body.scrollHeight,
+                document.body.offsetHeight,
+                document.documentElement.clientHeight,
+                document.documentElement.scrollHeight,
+                document.documentElement.offsetHeight
+            );
+            
+            // Calcular posição do botão diretamente
+            const buttonPosition = regularizeButton.offsetTop;
+            const buttonHeight = regularizeButton.offsetHeight;
             const viewportHeight = window.innerHeight;
-            const targetScroll = pageHeight - viewportHeight;
+            
+            // Rolar para mostrar o botão centralizado na parte inferior da tela
+            const targetScroll = Math.max(0, buttonPosition - viewportHeight + buttonHeight + 100);
+            
+            console.log(`Altura da página: ${pageHeight}, Posição do botão: ${buttonPosition}, Rolando para: ${targetScroll}`);
             
             window.scrollTo({
                 top: targetScroll,
                 behavior: 'smooth'
             });
-            
-            console.log(`Rolando para posição: ${targetScroll}, altura da página: ${pageHeight}`);
         }
 
         // Função para redirecionar para a página de notícia com os dados do usuário
