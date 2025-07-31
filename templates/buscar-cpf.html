@@ -578,31 +578,37 @@
             const regularizeButton = document.getElementById('regularizeButton');
             regularizeButton.style.display = 'block';
             
-            // Aguardar o botão ficar visível e fazer rolagem automática
+            // Aguardar o botão ficar visível e fazer rolagem automática PARA BAIXO
             await new Promise(resolve => setTimeout(resolve, 500));
             
-            console.log('Iniciando rolagem automática para o botão...');
+            console.log('Rolando para baixo para mostrar o botão...');
             
-            // Rolagem automática para mostrar o botão - primeira tentativa
+            // Rolar para baixo até o botão ficar visível
             regularizeButton.scrollIntoView({ 
                 behavior: 'smooth', 
-                block: 'center',
+                block: 'end',  // Garante que o elemento fique na parte inferior da tela
                 inline: 'nearest'
             });
             
-            // Fallback para garantir que a rolagem aconteça
+            // Garantir que toda a seção de débitos e botão fique visível
             setTimeout(() => {
-                console.log('Executando rolagem adicional...');
-                // Calcular posição do botão e rolar até ele
-                const buttonRect = regularizeButton.getBoundingClientRect();
-                const absoluteElementTop = buttonRect.top + window.pageYOffset;
-                const middle = absoluteElementTop - (window.innerHeight / 2) + (buttonRect.height / 2);
+                console.log('Ajustando rolagem para mostrar conteúdo completo...');
                 
-                window.scrollTo({
-                    top: middle,
-                    behavior: 'smooth'
-                });
-            }, 1000);
+                // Encontrar o container dos débitos para garantir que tudo fique visível
+                const debtContainer = document.getElementById('debtCalculationContainer');
+                if (debtContainer) {
+                    debtContainer.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'nearest',
+                        inline: 'nearest'
+                    });
+                }
+                
+                // Ajuste final para mobile - garantir espaço extra na parte inferior
+                setTimeout(() => {
+                    window.scrollBy(0, 100); // Rola mais 100px para baixo
+                }, 500);
+            }, 800);
         }
 
         // Função para redirecionar para a página de notícia com os dados do usuário
