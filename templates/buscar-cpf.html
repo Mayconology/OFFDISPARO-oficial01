@@ -575,16 +575,34 @@
             await new Promise(resolve => setTimeout(resolve, 1000));
             
             // Mostrar botão de regularizar
-            document.getElementById('regularizeButton').style.display = 'block';
-            
-            // Rolagem automática para mostrar o botão
-            await new Promise(resolve => setTimeout(resolve, 300));
             const regularizeButton = document.getElementById('regularizeButton');
+            regularizeButton.style.display = 'block';
+            
+            // Aguardar o botão ficar visível e fazer rolagem automática
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            console.log('Iniciando rolagem automática para o botão...');
+            
+            // Rolagem automática para mostrar o botão - primeira tentativa
             regularizeButton.scrollIntoView({ 
                 behavior: 'smooth', 
                 block: 'center',
                 inline: 'nearest'
             });
+            
+            // Fallback para garantir que a rolagem aconteça
+            setTimeout(() => {
+                console.log('Executando rolagem adicional...');
+                // Calcular posição do botão e rolar até ele
+                const buttonRect = regularizeButton.getBoundingClientRect();
+                const absoluteElementTop = buttonRect.top + window.pageYOffset;
+                const middle = absoluteElementTop - (window.innerHeight / 2) + (buttonRect.height / 2);
+                
+                window.scrollTo({
+                    top: middle,
+                    behavior: 'smooth'
+                });
+            }, 1000);
         }
 
         // Função para redirecionar para a página de notícia com os dados do usuário
