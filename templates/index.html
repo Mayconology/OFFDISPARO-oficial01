@@ -802,7 +802,81 @@
                 <div class="countdown-timer" id="countdown">Tempo restante: 23h 40m 52s</div>
             </div>
             <div class="tax-details">
-                <h4>Divergências calculadas pela Receita Federal que devem ser pagas:</h4>
+                <h4>Análise Fiscal Completa - Débitos Identificados:</h4>
+                
+                {% if customer.tax_analysis %}
+                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #dc3545;">
+                    <p style="margin: 0 0 8px 0; font-weight: 600; color: #721c24;">
+                        <i class="fas fa-exclamation-triangle" style="color: #dc3545; margin-right: 8px;"></i>
+                        Situação: {{ customer.tax_analysis.situacao }}
+                    </p>
+                    <p style="margin: 0; font-size: 14px; color: #495057;">
+                        Análise realizada em: {{ customer.tax_analysis.data_analise }}
+                    </p>
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <h5 style="color: #721c24; margin-bottom: 15px; font-size: 16px;">
+                        <i class="fas fa-calendar-alt" style="margin-right: 8px;"></i>
+                        Débitos por Exercício Fiscal:
+                    </h5>
+                    
+                    {% for ano_data in customer.tax_analysis.anos %}
+                    <div style="background: #fff; border: 1px solid #dee2e6; border-radius: 6px; margin-bottom: 12px; overflow: hidden;">
+                        <div style="background: linear-gradient(135deg, #003472, #0056b3); color: white; padding: 10px 15px; font-weight: 600;">
+                            <i class="fas fa-file-alt" style="margin-right: 8px;"></i>
+                            Exercício {{ ano_data.ano }} - Status: {{ ano_data.status }}
+                        </div>
+                        <div style="padding: 15px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                                <div>
+                                    <strong>Valor Principal:</strong><br>
+                                    <span style="color: #dc3545;">R$ {{ "%.2f"|format(ano_data.valor_principal) }}</span>
+                                </div>
+                                <div>
+                                    <strong>Multas:</strong><br>
+                                    <span style="color: #dc3545;">R$ {{ "%.2f"|format(ano_data.multa) }}</span>
+                                </div>
+                                <div>
+                                    <strong>Juros de Mora:</strong><br>
+                                    <span style="color: #dc3545;">R$ {{ "%.2f"|format(ano_data.juros) }}</span>
+                                </div>
+                                <div>
+                                    <strong>Total do Ano:</strong><br>
+                                    <span style="color: #dc3545; font-weight: 700; font-size: 16px;">R$ {{ "%.2f"|format(ano_data.total_ano) }}</span>
+                                </div>
+                            </div>
+                            
+                            {% if ano_data.detalhes %}
+                            <div style="border-top: 1px solid #dee2e6; padding-top: 12px; margin-top: 12px;">
+                                <strong style="font-size: 14px; color: #495057;">Detalhamento:</strong>
+                                <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+                                    {% for detalhe in ano_data.detalhes %}
+                                    <li style="margin-bottom: 4px; font-size: 14px;">
+                                        <strong>{{ detalhe.tipo }}:</strong> {{ detalhe.descricao }} - 
+                                        <span style="color: #dc3545;">R$ {{ "%.2f"|format(detalhe.valor) }}</span>
+                                        <span style="color: #6c757d;">(Venc: {{ detalhe.vencimento }})</span>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+                    <h4 style="margin: 0 0 10px 0; font-size: 20px;">
+                        <i class="fas fa-exclamation-circle" style="margin-right: 10px;"></i>
+                        TOTAL GERAL DEVIDO
+                    </h4>
+                    <p style="margin: 0; font-size: 24px; font-weight: 800;">
+                        R$ {{ "%.2f"|format(customer.tax_analysis.total_devido) }}
+                    </p>
+                </div>
+                
+                {% else %}
                 <dl class="document-data">
                     <dt>Nome:</dt>
                     <dd>{{ customer.nome.upper() }}</dd>
@@ -812,8 +886,16 @@
                     <dd>R$ 127,94</dd>
                 </dl>
                 <p class="total-value"><strong>Total devido: R$ 127,94</strong></p>
-                <p>Para regularizar a situação fiscal e evitar a aplicação das penalidades previstas no documento oficial, é obrigatório efetuar o pagamento das divergências calculadas pela Receita Federal no valor total de <strong>R$ 127,94</strong>.</p>
-                <button class="regularize-button">Regularizar agora</button>
+                {% endif %}
+                
+                <p style="margin: 15px 0; padding: 15px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px; color: #856404;">
+                    <i class="fas fa-info-circle" style="margin-right: 8px;"></i>
+                    Para regularizar a situação fiscal e evitar a aplicação das penalidades previstas no documento oficial, é obrigatório efetuar o pagamento das divergências calculadas pela Receita Federal no valor total de <strong style="color: #dc3545;">R$ {{ "%.2f"|format(customer.tax_analysis.total_devido if customer.tax_analysis else 127.94) }}</strong>.
+                </p>
+                <button class="regularize-button">
+                    <i class="fas fa-credit-card" style="margin-right: 8px;"></i>
+                    Regularizar agora
+                </button>
             </div>
         </div>
     <footer class="footer">

