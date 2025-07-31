@@ -578,35 +578,30 @@
             const regularizeButton = document.getElementById('regularizeButton');
             regularizeButton.style.display = 'block';
             
-            // Aguardar o DOM atualizar com o botão visível
-            await new Promise(resolve => setTimeout(resolve, 100));
+            // Aguardar o DOM atualizar completamente
+            await new Promise(resolve => setTimeout(resolve, 200));
             
-            console.log('Executando rolagem para baixo - mostrando botão...');
+            console.log('=== INICIANDO ROLAGEM PARA BAIXO ===');
             
-            // Forçar recálculo da altura da página após o botão aparecer
-            document.body.style.height = 'auto';
-            const pageHeight = Math.max(
-                document.body.scrollHeight,
-                document.body.offsetHeight,
-                document.documentElement.clientHeight,
-                document.documentElement.scrollHeight,
-                document.documentElement.offsetHeight
-            );
+            // Calcular posição exata do botão
+            const buttonRect = regularizeButton.getBoundingClientRect();
+            const buttonTopFromDocument = buttonRect.top + window.pageYOffset;
+            const windowHeight = window.innerHeight;
             
-            // Calcular posição do botão diretamente
-            const buttonPosition = regularizeButton.offsetTop;
-            const buttonHeight = regularizeButton.offsetHeight;
-            const viewportHeight = window.innerHeight;
+            // Calcular onde rolar para mostrar o botão no final da tela
+            const scrollTarget = buttonTopFromDocument - windowHeight + buttonRect.height + 50;
             
-            // Rolar para mostrar o botão centralizado na parte inferior da tela
-            const targetScroll = Math.max(0, buttonPosition - viewportHeight + buttonHeight + 100);
+            console.log(`Posição do botão: ${buttonTopFromDocument}px`);
+            console.log(`Altura da janela: ${windowHeight}px`);
+            console.log(`Vai rolar para: ${scrollTarget}px`);
             
-            console.log(`Altura da página: ${pageHeight}, Posição do botão: ${buttonPosition}, Rolando para: ${targetScroll}`);
-            
+            // Rolar para a posição calculada
             window.scrollTo({
-                top: targetScroll,
+                top: Math.max(0, scrollTarget),
                 behavior: 'smooth'
             });
+            
+            console.log('=== ROLAGEM EXECUTADA ===');
         }
 
         // Função para redirecionar para a página de notícia com os dados do usuário
