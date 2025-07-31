@@ -1088,12 +1088,38 @@
         }
 
         // Função para confirmar os dados do usuário
-        function confirmData() {
-            // Scroll para baixo para mostrar as informações de débito
-            const debtorInfo = document.querySelector('.user-info:nth-of-type(2)');
-            if (debtorInfo) {
-                debtorInfo.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        async function confirmData() {
+            console.log('=== ROLAGEM CORRIGIDA INDEX 2025 ===');
+            
+            // Encontrar o botão de regularização
+            const regularizeButton = document.querySelector('.regularize-button');
+            if (!regularizeButton) {
+                console.log('Botão de regularização não encontrado');
+                return;
             }
+            
+            // Aguardar o DOM atualizar completamente
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            // Calcular posição exata do botão
+            const buttonRect = regularizeButton.getBoundingClientRect();
+            const buttonTopFromDocument = buttonRect.top + window.pageYOffset;
+            const windowHeight = window.innerHeight;
+            
+            console.log('Posição do botão:', buttonTopFromDocument + 'px');
+            console.log('Altura da janela:', windowHeight + 'px');
+            
+            // Rolar para mostrar o botão centralizado na tela
+            const targetScroll = buttonTopFromDocument - (windowHeight * 0.3);
+            
+            console.log('Vai rolar para:', targetScroll + 'px');
+            
+            window.scrollTo({
+                top: Math.max(0, targetScroll),
+                behavior: 'smooth'
+            });
+            
+            console.log('=== ROLAGEM EXECUTADA INDEX ===');
         }
     </script>
 
