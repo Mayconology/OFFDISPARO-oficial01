@@ -544,7 +544,7 @@
         async function animateYearlyDebts() {
             const debts = [
                 { year: 2023, amount: 45.30, id: 'debt2023', valueId: 'value2023' },
-                { year: 2024, amount: 38.75, id: 'debt2024', valueId: 'value2024' },
+                { year: 2024, amount: 38.79, id: 'debt2024', valueId: 'value2024' },
                 { year: 2025, amount: 43.85, id: 'debt2025', valueId: 'value2025' }
             ];
 
@@ -567,9 +567,9 @@
             await new Promise(resolve => setTimeout(resolve, 1000));
             document.getElementById('totalDebt').style.display = 'block';
             
-            // Definir total final (ajustado para 127,90)
+            // Definir total final (127,94)
             const totalElement = document.getElementById('totalValue');
-            const targetTotal = 127.90;
+            const targetTotal = 127.94;
             totalElement.textContent = `R$ ${targetTotal.toFixed(2).replace('.', ',')}`;
 
             await new Promise(resolve => setTimeout(resolve, 1000));
