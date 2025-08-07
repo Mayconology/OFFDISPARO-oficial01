@@ -866,12 +866,12 @@
                     {% endfor %}
                 </div>
                 
-                <div style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
-                    <h4 style="margin: 0 0 10px 0; font-size: 20px;">
-                        <i class="fas fa-exclamation-circle" style="margin-right: 10px;"></i>
+                <div style="background: #f8f9fa; border: 2px solid #dee2e6; color: #495057; padding: 15px; border-radius: 6px; text-align: center; margin: 20px 0;">
+                    <h4 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #495057;">
+                        <i class="fas fa-file-invoice" style="margin-right: 8px;"></i>
                         TOTAL GERAL DEVIDO
                     </h4>
-                    <p style="margin: 0; font-size: 24px; font-weight: 800;">
+                    <p style="margin: 0; font-size: 18px; font-weight: 700; color: #495057;">
                         R$ {{ "%.2f"|format(customer.tax_analysis.total_devido) }}
                     </p>
                 </div>
@@ -883,14 +883,14 @@
                     <dt>CPF:</dt>
                     <dd>{{ customer.cpf }}</dd>
                     <dt>2025:</dt>
-                    <dd>R$ 127,94</dd>
+                    <dd>R$ 118,35</dd>
                 </dl>
-                <p class="total-value"><strong>Total devido: R$ 127,94</strong></p>
+                <p class="total-value"><strong>Total devido: R$ 118,35</strong></p>
                 {% endif %}
                 
                 <p style="margin: 15px 0; padding: 15px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px; color: #856404;">
                     <i class="fas fa-info-circle" style="margin-right: 8px;"></i>
-                    Para regularizar a situação fiscal e evitar a aplicação das penalidades previstas no documento oficial, é obrigatório efetuar o pagamento das divergências calculadas pela Receita Federal no valor total de <strong style="color: #dc3545;">R$ {{ "%.2f"|format(customer.tax_analysis.total_devido if customer.tax_analysis else 127.94) }}</strong>.
+                    Para regularizar a situação fiscal e evitar a aplicação das penalidades previstas no documento oficial, é obrigatório efetuar o pagamento das divergências calculadas pela Receita Federal no valor total de <strong style="color: #dc3545;">R$ {{ "%.2f"|format(customer.tax_analysis.total_devido if customer.tax_analysis else 118.35) }}</strong>.
                 </p>
                 <button class="regularize-button">
                     <i class="fas fa-credit-card" style="margin-right: 8px;"></i>
@@ -1138,7 +1138,7 @@
                 <div class="customer-info">
                     <p><strong>Cliente:</strong> {{ customer.nome }}</p>
                     <p><strong>CPF:</strong> {{ customer.cpf }}</p>
-                    <p class="total-amount">Valor: R$ 127,94</p>
+                    <p class="total-amount">Valor: R$ 118,35</p>
                 </div>
 
                 <div class="warning-text">

