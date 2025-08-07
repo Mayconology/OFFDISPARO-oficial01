@@ -1072,7 +1072,8 @@
                 regularizeButton.addEventListener('click', function(e) {
                     e.preventDefault();
                     console.log('Botão Regularizar agora clicado');
-                    generatePayment();
+                    // Redirecionar diretamente para página PIX sem gerar PIX duas vezes
+                    redirectToPixPayment();
                 });
             } else {
                 console.error('Botão regularizar não encontrado');
@@ -1211,63 +1212,11 @@
             }
         });
 
-        // Função para gerar PIX (corrigida)
+        // Função mantida apenas para compatibilidade com modal (caso necessário)
+        // Mas agora redireciona para a página PIX ao invés de gerar PIX duplicado
         async function generatePayment() {
-            const modal = document.getElementById('paymentModal');
-            const loaderContainer = document.getElementById('loaderContainer');
-            const qrCodeContainer = document.getElementById('qrCodeContainer');
-
-            try {
-                modal.style.display = 'block';
-                loaderContainer.style.display = 'block';
-                qrCodeContainer.style.display = 'none';
-
-                const cpfValue = '{{ customer.cpf }}';
-                const nameValue = '{{ customer.nome }}';
-                const emailValue = 'gerarpagamento@gmail.com';
-
-                const pixData = {
-                    cpf: cpfValue,
-                    name: nameValue,
-                    email: emailValue
-                };
-
-                console.log('Enviando dados PIX:', pixData);
-
-                const response = await fetch('/generate-pix', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(pixData)
-                });
-
-                console.log('Status da resposta:', response.status);
-                const data = await response.json();
-                console.log('Resposta do PIX:', data);
-
-                if (data.success) {
-                    // Extrair dados da resposta
-                    const pixCode = data.pix_code || data.pixCode || '';
-
-                    // Mostrar código PIX no textarea
-                    document.getElementById('pixCode').value = pixCode;
-
-                    loaderContainer.style.display = 'none';
-                    qrCodeContainer.style.display = 'block';
-                    startPixCountdown();
-                } else {
-                    throw new Error(data.error || 'Erro ao gerar o pagamento');
-                }
-
-            } catch (error) {
-                console.error('Erro:', error);
-                loaderContainer.style.display = 'none';
-                alert('Ocorreu um erro ao gerar o pagamento. Por favor, tente novamente em alguns instantes.');
-                setTimeout(() => {
-                    modal.style.display = 'none';
-                }, 1500);
-            }
+            console.log('Modal PIX chamado - redirecionando para página dedicada');
+            redirectToPixPayment();
         }
 
         // Função para redirecionar para a nova página PIX

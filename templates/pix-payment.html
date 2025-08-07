@@ -202,6 +202,8 @@ let verificacaoInterval = null;
 let dadosUsuario = {};
 let lastCheckTime = 0;
 const CHECK_INTERVAL = 5000; // 5 segundos
+let pixGenerationInProgress = false;
+let pixAlreadyGenerated = false;
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('PIX Payment Page loaded');
@@ -237,6 +239,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function gerarPIX() {
     try {
+        // Verificar se já está gerando PIX ou se já foi gerado
+        if (pixGenerationInProgress) {
+            console.log('🔄 PIX já está sendo gerado, aguardando...');
+            return;
+        }
+        
+        if (pixAlreadyGenerated) {
+            console.log('✅ PIX já foi gerado anteriormente');
+            return;
+        }
+        
+        pixGenerationInProgress = true;
+        console.log('🚀 Iniciando geração de PIX...');
+        
         // Mostrar loading state
         document.getElementById('payment-status').innerHTML = `
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
@@ -316,6 +332,7 @@ async function gerarPIX() {
                 }
                 
                 console.log('🎉 PIX configurado com sucesso!');
+                pixAlreadyGenerated = true;
             } else {
                 console.error('❌ Código PIX vazio ou inválido:', pixCode);
                 mostrarErro('Código PIX não encontrado na resposta da API');
@@ -330,6 +347,8 @@ async function gerarPIX() {
         
         // Mostrar botão de debug em caso de erro
         document.getElementById('verify-payment-btn').style.display = 'block';
+    } finally {
+        pixGenerationInProgress = false;
     }
 }
 
