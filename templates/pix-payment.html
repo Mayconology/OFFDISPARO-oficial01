@@ -200,6 +200,8 @@
 let transacaoId = null;
 let verificacaoInterval = null;
 let dadosUsuario = {};
+let lastCheckTime = 0;
+const CHECK_INTERVAL = 5000; // 5 segundos
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('PIX Payment Page loaded');
@@ -267,39 +269,55 @@ async function gerarPIX() {
         }
         
         const data = await response.json();
-        console.log('Resposta da API PIX:', data);
+        console.log('✅ Resposta da API PIX recebida:', data);
         
         if (data.success) {
             transacaoId = data.transaction_id || data.order_id;
-            
-            // Debug: mostrar resposta completa
-            console.log('Dados PIX recebidos:', data);
+            console.log('🔑 Transaction ID:', transacaoId);
             
             // Tentar diferentes campos para o código PIX
             const pixCode = data.pixCode || data.pix_code || data.pixQrCode || data.qr_code_image || '';
+            console.log('📝 Código PIX extraído:', pixCode ? 'SIM' : 'NÃO', '- Tamanho:', pixCode.length);
             
-            if (pixCode) {
-                // Mostrar código PIX
-                document.getElementById('pix-code').value = pixCode;
+            if (pixCode && pixCode.length > 0) {
+                // Verificar se elementos existem
+                const pixInput = document.getElementById('pix-code');
+                const qrImg = document.getElementById('qr-code-img');
                 
-                // Gerar QR code dinamicamente
-                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=144x144&data=${encodeURIComponent(pixCode)}`;
-                document.getElementById('qr-code-img').src = qrCodeUrl;
+                console.log('🎯 Elementos encontrados:', {
+                    pixInput: !!pixInput,
+                    qrImg: !!qrImg
+                });
                 
-                console.log('✅ Código PIX configurado:', pixCode.substring(0, 50) + '...');
+                if (pixInput) {
+                    pixInput.value = pixCode;
+                    console.log('✅ PIX code definido no input');
+                }
                 
-                // Atualizar status - indicar se veio do cache
+                if (qrImg) {
+                    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=144x144&data=${encodeURIComponent(pixCode)}`;
+                    qrImg.src = qrCodeUrl;
+                    console.log('✅ QR Code URL definida:', qrCodeUrl.substring(0, 100) + '...');
+                }
+                
+                // Atualizar status
                 const statusMessage = data.cached ? 'PIX recuperado (rápido)' : 'PIX gerado com sucesso';
                 const cacheIcon = data.cached ? '<i class="fas fa-clock mr-1"></i>' : '<i class="fas fa-check mr-1"></i>';
                 
-                document.getElementById('payment-status').innerHTML = `
-                    <div class="bg-green-50 border border-green-200 rounded-lg p-3">
-                        <div class="text-green-800 text-[14px] font-medium mb-1">${cacheIcon}${statusMessage}</div>
-                        <div class="text-green-600 text-[12px]">Escaneie o QR Code ou copie o código abaixo</div>
-                    </div>
-                `;
+                const statusElement = document.getElementById('payment-status');
+                if (statusElement) {
+                    statusElement.innerHTML = `
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                            <div class="text-green-800 text-[14px] font-medium mb-1">${cacheIcon}${statusMessage}</div>
+                            <div class="text-green-600 text-[12px]">Escaneie o QR Code ou copie o código abaixo</div>
+                        </div>
+                    `;
+                    console.log('✅ Status atualizado');
+                }
+                
+                console.log('🎉 PIX configurado com sucesso!');
             } else {
-                console.error('❌ Nenhum código PIX encontrado na resposta');
+                console.error('❌ Código PIX vazio ou inválido:', pixCode);
                 mostrarErro('Código PIX não encontrado na resposta da API');
             }
             
@@ -314,14 +332,6 @@ async function gerarPIX() {
         document.getElementById('verify-payment-btn').style.display = 'block';
     }
 }
-
-// Otimizar verificação de pagamento
-let lastCheckTime = 0;
-const CHECK_INTERVAL = 5000; // 5 segundos
-
-// Otimizar verificação de pagamento
-let lastCheckTime = 0;
-const CHECK_INTERVAL = 5000; // 5 segundos
 
 function copiarCodigo() {
     const pixCode = document.getElementById('pix-code').value;
