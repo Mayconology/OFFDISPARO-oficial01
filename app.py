@@ -483,6 +483,73 @@ def webhook_paybets():
             'provider': 'PayBets'
         }), 500
 
+@app.route('/pix-payment')
+def pix_payment():
+    """Nova página de pagamento PIX com layout moderno"""
+    try:
+        # Obter dados do cliente da sessão ou URL
+        customer_cpf = request.args.get('cpf', '')
+        customer_name = request.args.get('nome', '')
+        
+        # Se não temos dados na URL, tentar buscar da sessão
+        if not customer_cpf or not customer_name:
+            # Buscar da sessão ou usar dados padrão
+            customer_data = session.get('customer_data', {})
+            customer_cpf = customer_data.get('cpf', '')
+            customer_name = customer_data.get('nome', '')
+        
+        app.logger.info(f"[PROD] Carregando página PIX para: {customer_name} (CPF: {customer_cpf[:3]}***{customer_cpf[-2:] if customer_cpf else ''})")
+        
+        customer = {
+            'nome': customer_name,
+            'cpf': customer_cpf
+        } if customer_name and customer_cpf else None
+        
+        return render_template('pix-payment.html', customer=customer)
+    
+    except Exception as e:
+        app.logger.error(f"[PROD] Erro ao carregar página PIX: {e}")
+        return render_template('pix-payment.html', customer=None)
+
+@app.route('/api/verificar-pagamento/<transaction_id>')
+def verificar_pagamento(transaction_id):
+    """API para verificar status do pagamento (compatível com nova página PIX)"""
+    try:
+        app.logger.info(f"[PROD] Verificando pagamento: {transaction_id}")
+
+        # Tentar Iron Pay primeiro
+        try:
+            iron_pay_api = create_iron_pay_provider()
+            result = iron_pay_api.check_payment_status(transaction_id)
+
+            app.logger.info(f"[PROD] Status Iron Pay: {result.get('status')}")
+
+            return jsonify({
+                'success': True,
+                'status': result.get('status', 'pending'),
+                'pago': result.get('paid', False),  # Campo compatível com nova página
+                'pending': result.get('status', 'pending') == 'pending',
+                'amount': result.get('amount', 0),
+                'transaction_id': transaction_id,
+                'provider': 'Iron Pay'
+            })
+
+        except Exception as e:
+            app.logger.warning(f"[PROD] Erro Iron Pay verificação: {str(e)}")
+
+            # Para demonstração, sempre retorna pending
+            return jsonify({
+                'success': True,
+                'status': 'pending',
+                'pago': False,  # Campo compatível
+                'pending': True,
+                'provider': 'Fallback'
+            })
+
+    except Exception as e:
+        app.logger.error(f"[PROD] Erro ao verificar pagamento: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/check-payment-status/<transaction_id>')
 def check_payment_status(transaction_id):
     """Verificar status do pagamento"""
