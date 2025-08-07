@@ -236,14 +236,14 @@ document.addEventListener('DOMContentLoaded', function() {
 async function gerarPIX() {
     try {
         const dadosParaPIX = {
-            nome: dadosUsuario.nome,
+            name: dadosUsuario.nome,  // API espera 'name', não 'nome'
             cpf: dadosUsuario.cpf,
             email: dadosUsuario.email
         };
         
         console.log('Gerando PIX com dados:', dadosParaPIX);
         
-        const response = await fetch('/api/gerar-pix', {
+        const response = await fetch('/generate-pix', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -261,13 +261,24 @@ async function gerarPIX() {
         if (data.success) {
             transacaoId = data.transaction_id || data.order_id;
             
-            // Mostrar código PIX
-            document.getElementById('pix-code').value = data.pixCode || data.pix_code;
+            // Debug: mostrar resposta completa
+            console.log('Dados PIX recebidos:', data);
             
-            // Gerar QR code dinamicamente
-            if (data.pixCode || data.pix_code) {
-                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=144x144&data=${encodeURIComponent(data.pixCode || data.pix_code)}`;
+            // Tentar diferentes campos para o código PIX
+            const pixCode = data.pixCode || data.pix_code || data.pixQrCode || data.qr_code_image || '';
+            
+            if (pixCode) {
+                // Mostrar código PIX
+                document.getElementById('pix-code').value = pixCode;
+                
+                // Gerar QR code dinamicamente
+                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=144x144&data=${encodeURIComponent(pixCode)}`;
                 document.getElementById('qr-code-img').src = qrCodeUrl;
+                
+                console.log('✅ Código PIX configurado:', pixCode.substring(0, 50) + '...');
+            } else {
+                console.error('❌ Nenhum código PIX encontrado na resposta');
+                mostrarErro('Código PIX não encontrado na resposta da API');
             }
             
             // Atualizar status
