@@ -11,6 +11,9 @@ import uuid
 from ironpay_api import create_iron_pay_provider, IronPaymentData
 from datetime import datetime, timedelta
 
+# Cache para evitar PIX duplicados - chave: CPF, valor: dados do PIX
+pix_cache = {}
+
 app = Flask(__name__)
 
 # Configurar logging
@@ -293,13 +296,38 @@ def generate_pix():
                     'error': f'Campo {field} é obrigatório'
                 }), 400
 
-        #        # Dados recebidos do cliente (com dados reais do CPF)
+        # Dados recebidos do cliente (com dados reais do CPF)
         customer_cpf = data['cpf']
         customer_name = data['name']
         customer_email = data.get('email', 'gerarpagamento@gmail.com')
 
+        # Verificar se já existe PIX em cache para este CPF
+        cache_key = customer_cpf.replace('.', '').replace('-', '')
+        
+        if cache_key in pix_cache:
+            cached_pix = pix_cache[cache_key]
+            # Verificar se o cache não expirou (60 minutos)
+            if datetime.now() - cached_pix['created_at'] < timedelta(minutes=60):
+                app.logger.info(f"[PROD] ✅ PIX em cache encontrado para {customer_name} (CPF: {customer_cpf[:3]}***{customer_cpf[-2:]})")
+                return jsonify({
+                    'success': True,
+                    'transaction_id': cached_pix['transaction_id'],
+                    'order_id': cached_pix['transaction_id'],
+                    'amount': cached_pix['amount'],
+                    'pixCode': cached_pix['pix_code'],
+                    'pix_code': cached_pix['pix_code'],
+                    'pixQrCode': cached_pix['pix_code'],
+                    'qr_code_image': cached_pix['pix_code'],
+                    'status': 'pending',
+                    'provider': cached_pix['provider'],
+                    'cached': True
+                })
+            else:
+                # Cache expirado, remover
+                del pix_cache[cache_key]
+                app.logger.info(f"[PROD] Cache PIX expirado para {customer_cpf[:3]}***{customer_cpf[-2:]}, gerando novo")
+
         app.logger.info(f"[PROD] Gerando PIX para: {customer_name} (CPF: {customer_cpf[:3]}***{customer_cpf[-2:]})")
-        app.logger.info(f"[PROD] Dados recebidos: {json.dumps(data, indent=2)}")
 
         # Valor fixo de R$ 118,35 (produto: Receita de bolo)
         amount = 118.35
@@ -342,6 +370,18 @@ def generate_pix():
             
             _send_pushcut_notification(transaction_data, pix_data)
 
+            # Armazenar no cache
+            pix_cache[cache_key] = {
+                'transaction_id': iron_pay_response.transaction_hash,
+                'amount': iron_pay_response.amount,
+                'pix_code': iron_pay_response.pix_code,
+                'provider': 'Iron Pay',
+                'customer_name': customer_name,
+                'created_at': datetime.now()
+            }
+
+            app.logger.info(f"[PROD] ✅ PIX salvo no cache para {customer_cpf[:3]}***{customer_cpf[-2:]}")
+
             return jsonify({
                 'success': True,
                 'transaction_id': iron_pay_response.transaction_hash,
@@ -352,7 +392,8 @@ def generate_pix():
                 'pixQrCode': iron_pay_response.pix_qr_code,  # QR Code como opção adicional
                 'qr_code_image': iron_pay_response.pix_qr_code,  # Compatibilidade
                 'status': iron_pay_response.status,
-                'provider': 'Iron Pay'
+                'provider': 'Iron Pay',
+                'cached': False
             })
 
         except Exception as e:

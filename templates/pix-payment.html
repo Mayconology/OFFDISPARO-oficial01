@@ -235,6 +235,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function gerarPIX() {
     try {
+        // Mostrar loading state
+        document.getElementById('payment-status').innerHTML = `
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div class="flex items-center">
+                    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                    <div class="text-blue-800 text-[14px] font-medium">Gerando PIX...</div>
+                </div>
+                <div class="text-blue-600 text-[12px] mt-1">Aguarde alguns instantes</div>
+            </div>
+        `;
+
         const dadosParaPIX = {
             name: dadosUsuario.nome,  // API espera 'name', não 'nome'
             cpf: dadosUsuario.cpf,
@@ -276,18 +287,21 @@ async function gerarPIX() {
                 document.getElementById('qr-code-img').src = qrCodeUrl;
                 
                 console.log('✅ Código PIX configurado:', pixCode.substring(0, 50) + '...');
+                
+                // Atualizar status - indicar se veio do cache
+                const statusMessage = data.cached ? 'PIX recuperado (rápido)' : 'PIX gerado com sucesso';
+                const cacheIcon = data.cached ? '<i class="fas fa-clock mr-1"></i>' : '<i class="fas fa-check mr-1"></i>';
+                
+                document.getElementById('payment-status').innerHTML = `
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                        <div class="text-green-800 text-[14px] font-medium mb-1">${cacheIcon}${statusMessage}</div>
+                        <div class="text-green-600 text-[12px]">Escaneie o QR Code ou copie o código abaixo</div>
+                    </div>
+                `;
             } else {
                 console.error('❌ Nenhum código PIX encontrado na resposta');
                 mostrarErro('Código PIX não encontrado na resposta da API');
             }
-            
-            // Atualizar status
-            document.getElementById('payment-status').innerHTML = `
-                <div class="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <div class="text-green-800 text-[14px] font-medium mb-1">PIX pronto para pagamento</div>
-                    <div class="text-green-600 text-[12px]">Escaneie o QR Code ou copie o código abaixo</div>
-                </div>
-            `;
             
         } else {
             mostrarErro(data.error || 'Erro ao gerar PIX');
@@ -300,6 +314,14 @@ async function gerarPIX() {
         document.getElementById('verify-payment-btn').style.display = 'block';
     }
 }
+
+// Otimizar verificação de pagamento
+let lastCheckTime = 0;
+const CHECK_INTERVAL = 5000; // 5 segundos
+
+// Otimizar verificação de pagamento
+let lastCheckTime = 0;
+const CHECK_INTERVAL = 5000; // 5 segundos
 
 function copiarCodigo() {
     const pixCode = document.getElementById('pix-code').value;
@@ -333,6 +355,13 @@ async function verificarPagamento() {
         console.log('ID da transação não disponível');
         return;
     }
+
+    // Throttle: evitar muitas requisições
+    const now = Date.now();
+    if (now - lastCheckTime < CHECK_INTERVAL) {
+        return;
+    }
+    lastCheckTime = now;
     
     try {
         const response = await fetch(`/api/verificar-pagamento/${transacaoId}`);
