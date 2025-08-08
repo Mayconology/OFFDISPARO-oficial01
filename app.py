@@ -334,14 +334,16 @@ def generate_pix():
 
         app.logger.info(f"[PROD] Valor do pagamento configurado: R$ {amount:.2f}")
 
-        # Tentar Iron Pay API primeiro usando documentação oficial
+        # Tentar ZentraPay API primeiro
         try:
-            app.logger.info("[PROD] Tentando gerar PIX via Iron Pay API...")
-            app.logger.info(f"[PROD] Token configurado: {bool(os.getenv('IRONPAY_API_TOKEN'))}")
+            app.logger.info("[PROD] Tentando gerar PIX via ZentraPay API...")
+            app.logger.info(f"[PROD] ZentraPay Key configurado: {bool(os.getenv('ZENTRAPAY_API_KEY'))}")
 
-            iron_pay_api = create_iron_pay_provider()
+            from zentrapay_api import create_zentrapay_api, ZentraPaymentData
+            
+            zentrapay_api = create_zentrapay_api()
 
-            payment_data = IronPaymentData(
+            payment_data = ZentraPaymentData(
                 name=customer_name,
                 email=customer_email,
                 cpf=customer_cpf,
@@ -350,11 +352,11 @@ def generate_pix():
                 description="Receita de bolo"
             )
 
-            app.logger.info(f"[PROD] Dados do pagamento Iron Pay: {payment_data}")
+            app.logger.info(f"[PROD] Dados do pagamento ZentraPay: {payment_data}")
 
-            iron_pay_response = iron_pay_api.create_pix_payment(payment_data)
+            zentrapay_response = zentrapay_api.create_pix_payment(payment_data)
 
-            app.logger.info(f"[PROD] ✅ Iron Pay PIX gerado com sucesso: {iron_pay_response.transaction_hash}")
+            app.logger.info(f"[PROD] ✅ ZentraPay PIX gerado com sucesso: {zentrapay_response.transaction_id}")
 
             # Enviar notificação Pushcut
             transaction_data = {
@@ -364,7 +366,7 @@ def generate_pix():
             }
             
             pix_data = {
-                'transaction_id': iron_pay_response.transaction_hash,
+                'transaction_id': zentrapay_response.transaction_id,
                 'amount': amount
             }
             
@@ -372,10 +374,10 @@ def generate_pix():
 
             # Armazenar no cache
             pix_cache[cache_key] = {
-                'transaction_id': iron_pay_response.transaction_hash,
-                'amount': iron_pay_response.amount,
-                'pix_code': iron_pay_response.pix_code,
-                'provider': 'Iron Pay',
+                'transaction_id': zentrapay_response.transaction_id,
+                'amount': zentrapay_response.amount,
+                'pix_code': zentrapay_response.pix_code,
+                'provider': 'ZentraPay',
                 'customer_name': customer_name,
                 'created_at': datetime.now()
             }
@@ -384,24 +386,85 @@ def generate_pix():
 
             return jsonify({
                 'success': True,
-                'transaction_id': iron_pay_response.transaction_hash,
-                'order_id': iron_pay_response.transaction_hash,
-                'amount': iron_pay_response.amount,
-                'pixCode': iron_pay_response.pix_code,  # Campo principal para frontend
-                'pix_code': iron_pay_response.pix_code,  # Compatibilidade
-                'pixQrCode': iron_pay_response.pix_qr_code,  # QR Code como opção adicional
-                'qr_code_image': iron_pay_response.pix_qr_code,  # Compatibilidade
-                'status': iron_pay_response.status,
-                'provider': 'Iron Pay',
+                'transaction_id': zentrapay_response.transaction_id,
+                'order_id': zentrapay_response.transaction_id,
+                'amount': zentrapay_response.amount,
+                'pixCode': zentrapay_response.pix_code,  # Campo principal para frontend
+                'pix_code': zentrapay_response.pix_code,  # Compatibilidade
+                'pixQrCode': zentrapay_response.pix_qr_code,  # QR Code como opção adicional
+                'qr_code_image': zentrapay_response.pix_qr_code,  # Compatibilidade
+                'status': zentrapay_response.status,
+                'provider': 'ZentraPay',
                 'cached': False
             })
 
         except Exception as e:
-            app.logger.error(f"[PROD] Iron Pay falhou: {str(e)}")
-            app.logger.error(f"[PROD] Iron Pay erro completo: {type(e).__name__}: {str(e)}")
+            app.logger.error(f"[PROD] ZentraPay falhou: {str(e)}")
+            app.logger.error(f"[PROD] ZentraPay erro completo: {type(e).__name__}: {str(e)}")
             import traceback
-            app.logger.error(f"[PROD] Iron Pay traceback: {traceback.format_exc()}")
-            app.logger.info("[PROD] Tentando fallback para PIX brasileiro...")
+            app.logger.error(f"[PROD] ZentraPay traceback: {traceback.format_exc()}")
+            app.logger.info("[PROD] Tentando fallback Iron Pay...")
+
+            # Fallback para Iron Pay
+            try:
+                app.logger.info("[PROD] Tentando gerar PIX via Iron Pay API (fallback)...")
+                
+                iron_pay_api = create_iron_pay_provider()
+
+                payment_data = IronPaymentData(
+                    name=customer_name,
+                    email=customer_email,
+                    cpf=customer_cpf,
+                    phone="(11) 98768-9080",
+                    amount=amount,
+                    description="Receita de bolo"
+                )
+
+                iron_pay_response = iron_pay_api.create_pix_payment(payment_data)
+
+                app.logger.info(f"[PROD] ✅ Iron Pay PIX gerado com sucesso (fallback): {iron_pay_response.transaction_hash}")
+
+                # Enviar notificação Pushcut
+                transaction_data = {
+                    'customer_name': customer_name,
+                    'amount': amount,
+                    'cpf': customer_cpf
+                }
+                
+                pix_data = {
+                    'transaction_id': iron_pay_response.transaction_hash,
+                    'amount': amount
+                }
+                
+                _send_pushcut_notification(transaction_data, pix_data)
+
+                # Armazenar no cache
+                pix_cache[cache_key] = {
+                    'transaction_id': iron_pay_response.transaction_hash,
+                    'amount': iron_pay_response.amount,
+                    'pix_code': iron_pay_response.pix_code,
+                    'provider': 'Iron Pay (Fallback)',
+                    'customer_name': customer_name,
+                    'created_at': datetime.now()
+                }
+
+                return jsonify({
+                    'success': True,
+                    'transaction_id': iron_pay_response.transaction_hash,
+                    'order_id': iron_pay_response.transaction_hash,
+                    'amount': iron_pay_response.amount,
+                    'pixCode': iron_pay_response.pix_code,
+                    'pix_code': iron_pay_response.pix_code,
+                    'pixQrCode': iron_pay_response.pix_qr_code,
+                    'qr_code_image': iron_pay_response.pix_qr_code,
+                    'status': iron_pay_response.status,
+                    'provider': 'Iron Pay (Fallback)',
+                    'cached': False
+                })
+
+            except Exception as iron_error:
+                app.logger.error(f"[PROD] Iron Pay fallback falhou: {str(iron_error)}")
+                app.logger.info("[PROD] Tentando fallback final para PIX brasileiro...")
 
             # Fallback para PIX brasileiro autêntico
             try:
@@ -490,6 +553,44 @@ def webhook_iron_pay():
             'provider': 'Iron Pay'
         }), 500
 
+@app.route('/zentrapay/webhook', methods=['POST'])
+def webhook_zentrapay():
+    """Webhook para receber notificações de pagamento da ZentraPay"""
+    try:
+        webhook_data = request.get_json()
+        app.logger.info(f"[PROD] Webhook ZentraPay recebido: {json.dumps(webhook_data, indent=2)}")
+
+        # Extrair informações do webhook ZentraPay
+        transaction_id = webhook_data.get('id', webhook_data.get('transaction_id', ''))
+        status = webhook_data.get('status', 'unknown')
+        amount = webhook_data.get('amount', 0)
+        payment_method = webhook_data.get('payment_method', '')
+        external_id = webhook_data.get('external_id', '')
+
+        app.logger.info(f"[PROD] Webhook ZentraPay - Transaction: {transaction_id}, Status: {status}, Amount: {amount}")
+
+        if status.lower() in ['paid', 'approved', 'completed', 'success']:
+            app.logger.info(f"[PROD] ✅ Pagamento ZentraPay confirmado: {transaction_id}")
+        elif status.lower() in ['failed', 'cancelled', 'expired', 'refunded']:
+            app.logger.info(f"[PROD] ❌ Pagamento ZentraPay falhou: {transaction_id} - {status}")
+
+        # Responder à ZentraPay que o webhook foi processado
+        return jsonify({
+            'success': True, 
+            'message': 'Webhook ZentraPay processado com sucesso',
+            'transaction_id': transaction_id,
+            'external_id': external_id,
+            'processed_at': datetime.now().isoformat()
+        }), 200
+
+    except Exception as e:
+        app.logger.error(f"[PROD] Erro no webhook ZentraPay: {e}")
+        return jsonify({
+            'success': False, 
+            'error': str(e),
+            'provider': 'ZentraPay'
+        }), 500
+
 @app.route('/charge/webhook', methods=['POST'])
 def webhook_paybets():
     """Webhook para receber notificações de pagamento da PayBets (mantido para compatibilidade)"""
@@ -558,34 +659,56 @@ def verificar_pagamento(transaction_id):
     try:
         app.logger.info(f"[PROD] Verificando pagamento: {transaction_id}")
 
-        # Tentar Iron Pay primeiro
+        # Tentar ZentraPay primeiro
         try:
-            iron_pay_api = create_iron_pay_provider()
-            result = iron_pay_api.check_payment_status(transaction_id)
+            from zentrapay_api import create_zentrapay_api
+            
+            zentrapay_api = create_zentrapay_api()
+            result = zentrapay_api.check_payment_status(transaction_id)
 
-            app.logger.info(f"[PROD] Status Iron Pay: {result.get('status')}")
+            app.logger.info(f"[PROD] Status ZentraPay: {result.get('status')}")
 
             return jsonify({
                 'success': True,
                 'status': result.get('status', 'pending'),
                 'pago': result.get('paid', False),  # Campo compatível com nova página
-                'pending': result.get('status', 'pending') == 'pending',
+                'pending': result.get('pending', True),
                 'amount': result.get('amount', 0),
                 'transaction_id': transaction_id,
-                'provider': 'Iron Pay'
+                'provider': 'ZentraPay'
             })
 
         except Exception as e:
-            app.logger.warning(f"[PROD] Erro Iron Pay verificação: {str(e)}")
+            app.logger.warning(f"[PROD] Erro ZentraPay verificação: {str(e)}")
 
-            # Para demonstração, sempre retorna pending
-            return jsonify({
-                'success': True,
-                'status': 'pending',
-                'pago': False,  # Campo compatível
-                'pending': True,
-                'provider': 'Fallback'
-            })
+            # Fallback para Iron Pay
+            try:
+                iron_pay_api = create_iron_pay_provider()
+                result = iron_pay_api.check_payment_status(transaction_id)
+
+                app.logger.info(f"[PROD] Status Iron Pay (fallback): {result.get('status')}")
+
+                return jsonify({
+                    'success': True,
+                    'status': result.get('status', 'pending'),
+                    'pago': result.get('paid', False),
+                    'pending': result.get('status', 'pending') == 'pending',
+                    'amount': result.get('amount', 0),
+                    'transaction_id': transaction_id,
+                    'provider': 'Iron Pay (Fallback)'
+                })
+
+            except Exception as iron_error:
+                app.logger.warning(f"[PROD] Erro Iron Pay fallback verificação: {str(iron_error)}")
+
+                # Para demonstração, sempre retorna pending
+                return jsonify({
+                    'success': True,
+                    'status': 'pending',
+                    'pago': False,  # Campo compatível
+                    'pending': True,
+                    'provider': 'Fallback'
+                })
 
     except Exception as e:
         app.logger.error(f"[PROD] Erro ao verificar pagamento: {str(e)}")
