@@ -99,6 +99,9 @@ class ZentraPayAPI:
                 else:
                     logger.warning(f"Request attempt {attempt + 1} failed: {str(e)}, retrying...")
                     continue
+        
+        # This should never be reached, but adding for type safety
+        raise Exception("All retry attempts failed")
 
     def _validate_cpf(self, cpf: str) -> str:
         """
@@ -350,7 +353,9 @@ class ZentraPayAPI:
         Gerar QR Code em base64 a partir do código PIX
         """
         try:
-            qr = qrcode.QRCode(
+            import qrcode.constants
+            import qrcode.main
+            qr = qrcode.main.QRCode(
                 version=1,
                 error_correction=qrcode.constants.ERROR_CORRECT_L,
                 box_size=10,
@@ -383,7 +388,7 @@ class ZentraPayAPI:
 
 # Funções auxiliares para compatibilidade
 
-def create_zentrapay_api(api_key: str = None) -> ZentraPayAPI:
+def create_zentrapay_api(api_key: Optional[str] = None) -> ZentraPayAPI:
     """
     Factory function para criar instância da API ZentraPay
     """

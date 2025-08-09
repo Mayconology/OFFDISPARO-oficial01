@@ -15,7 +15,7 @@ Preferred communication style: Simple, everyday language.
 - **Session Management**: Flask sessions with environment-based secret key
 - **Logging**: Python's built-in logging module (debug level)
 - **HTTP Client**: Requests library
-- **Payment Integration**: Primarily Iron Pay API, with a robust Brazilian PIX fallback system.
+- **Payment Integration**: ZentraPay API exclusively for Brazilian PIX payments.
 - **Customer Data**: Retrieval from an external lead database API.
 
 ### Frontend
@@ -39,7 +39,7 @@ Preferred communication style: Simple, everyday language.
 
 ### APIs
 - **Lead Database API**: `https://api-lista-leads.replit.app/api/search/{phone}`
-- **Iron Pay API**: `https://app.for4payments.com.br/api/v1` (for `POST /public/v1/transactions`)
+- **ZentraPay API**: `https://api.zentrapaybr.com` (for PIX payment generation and status checking)
 
 ### CDN Resources
 - **Tailwind CSS**: `https://cdn.tailwindcss.com`
@@ -47,6 +47,6 @@ Preferred communication style: Simple, everyday language.
 
 ### Environment Variables
 - `SESSION_SECRET`: Flask session encryption key.
-- `FOR4PAYMENTS_SECRET_KEY`: API authentication token for payment gateways.
-- `PAYBETS_CLIENT_ID`: OAuth client ID for PayBets.
-- `PAYBETS_CLIENT_SECRET`: OAuth client secret for PayBets.
+- `ZENTRAPAY_API_KEY`: API authentication key for ZentraPay payment gateway.
+- `ZENTRAPAY_WEBHOOK_URL`: Webhook URL for ZentraPay notifications.
+- `ZENTRAPAY_RETURN_URL`: Return URL after payment completion.
