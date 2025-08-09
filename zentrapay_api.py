@@ -37,7 +37,7 @@ class ZentraPayResponse:
 
 class ZentraPayAPI:
     """
-    Cliente para API ZentraPay BR - Implementação Production-Ready
+    Cliente para API ZentraPay BR - Implementação baseada na documentação oficial
     
     Funcionalidades:
     - Autenticação via API Key
@@ -58,7 +58,7 @@ class ZentraPayAPI:
             max_retries: Número máximo de tentativas em caso de falha
         """
         # URL oficial da ZentraPay conforme documentação
-        self.API_URL = "https://checkout.zentrapaybr.com"
+        self.API_URL = "https://api.zentrapaybr.com"
         self.timeout = timeout
         self.max_retries = max_retries
 
@@ -74,7 +74,7 @@ class ZentraPayAPI:
 
     def _get_headers(self) -> Dict[str, str]:
         """
-        Headers padrão para as requisições HTTP
+        Headers padrão para as requisições HTTP conforme documentação
         """
         return {
             "Content-Type": "application/json",
@@ -116,15 +116,16 @@ class ZentraPayAPI:
         logger.info(f"CPF validado: {cpf_clean[:3]}***{cpf_clean[-2:]}")
         return cpf_clean
 
-    def _generate_transaction_id(self) -> str:
-        """Gerar ID único para transação"""
+    def _generate_reference_id(self) -> str:
+        """Gerar reference_id único para transação conforme documentação"""
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
         unique_id = str(uuid.uuid4())[:8]
-        return f"ZENTRA-{timestamp}-{unique_id}"
+        return f"REF-{timestamp}-{unique_id}"
 
     def create_pix_payment(self, data: ZentraPaymentData) -> ZentraPayResponse:
         """
         Criar pagamento PIX via ZentraPay API
+        Baseado na documentação oficial: https://api.zentrapaybr.com/integration/docs/api
 
         Args:
             data: Dados do pagamento (ZentraPaymentData)
@@ -151,41 +152,39 @@ class ZentraPayAPI:
         if len(phone) < 10:
             phone = "11987679080"
 
-        # Gerar ID único para a transação
-        external_id = self._generate_transaction_id()
+        # Gerar reference_id único para a transação
+        reference_id = self._generate_reference_id()
 
-        # Construir payload conforme documentação ZentraPay
+        # Construir payload conforme documentação oficial ZentraPay
         payment_data = {
+            "reference_id": reference_id,
             "amount": float(data.amount),
-            "currency": "BRL",
-            "payment_method": "pix",
-            "external_id": external_id,
             "description": data.description,
             "customer": {
                 "name": data.name.strip(),
                 "email": data.email.strip(),
-                "document": {
-                    "type": "cpf",
-                    "number": cpf
-                },
+                "cpf": cpf,
                 "phone": phone
             },
+            "payment_methods": ["pix"],
             "notification_url": os.getenv("ZENTRAPAY_WEBHOOK_URL", "https://webhook.site/zentrapay-callback"),
-            "expires_in": 3600  # 1 hora
+            "return_url": os.getenv("ZENTRAPAY_RETURN_URL", "https://example.com/success"),
+            "expires_at": (datetime.now() + timedelta(hours=1)).isoformat()
         }
 
         # Log seguro (sem dados sensíveis)
-        logger.info(f"Creating PIX payment - Amount: R$ {data.amount:.2f}, External ID: {external_id}")
+        logger.info(f"Creating PIX payment - Amount: R$ {data.amount:.2f}, Reference ID: {reference_id}")
         logger.info(f"Customer: {data.name} - Document: {cpf[:3]}***{cpf[-2:]}")
 
         try:
             response = self._make_request_with_retry(
                 method="POST",
-                url=f"{self.API_URL}/api/v1/payments",
+                url=f"{self.API_URL}/v1/payments",
                 json=payment_data
             )
 
             logger.info(f"ZentraPay API response: HTTP {response.status_code}")
+            logger.info(f"ZentraPay API raw response: {response.text[:500]}...")
 
             # Tratar erros HTTP
             if response.status_code not in [200, 201]:
@@ -195,11 +194,12 @@ class ZentraPayAPI:
 
             # Processar resposta de sucesso
             response_data = response.json()
-            logger.info(f"ZentraPay API raw response: {json.dumps(response_data, indent=2)}")
+            logger.info(f"ZentraPay API parsed response: {json.dumps(response_data, indent=2)}")
             
-            if not response_data.get('success', True):
-                error_msg = response_data.get('message', 'Unknown error')
-                logger.error(f"ZentraPay API returned success=false: {error_msg}")
+            # Verificar se há erro na resposta
+            if response_data.get('error'):
+                error_msg = response_data.get('error', {}).get('message', 'Unknown error')
+                logger.error(f"ZentraPay API returned error: {error_msg}")
                 raise requests.exceptions.RequestException(f"ZentraPay Error: {error_msg}")
 
             logger.info("PIX payment created successfully via ZentraPay")
@@ -214,7 +214,7 @@ class ZentraPayAPI:
 
     def check_payment_status(self, transaction_id: str) -> Dict[str, Any]:
         """
-        Verificar status do pagamento
+        Verificar status do pagamento conforme documentação oficial
 
         Args:
             transaction_id: ID da transação ZentraPay
@@ -225,7 +225,7 @@ class ZentraPayAPI:
         try:
             response = self._make_request_with_retry(
                 method="GET",
-                url=f"{self.API_URL}/api/v1/payments/{transaction_id}"
+                url=f"{self.API_URL}/v1/payments/{transaction_id}"
             )
 
             if response.status_code == 404:
@@ -251,8 +251,8 @@ class ZentraPayAPI:
             return {
                 'status': status,
                 'transaction_id': transaction_id,
-                'paid': status in ['paid', 'completed', 'approved'],
-                'pending': status in ['pending', 'waiting_payment'],
+                'paid': status in ['paid', 'completed', 'approved', 'success'],
+                'pending': status in ['pending', 'waiting_payment', 'created'],
                 'failed': status in ['failed', 'expired', 'cancelled', 'refunded'],
                 'amount': response_data.get('amount', 0),
                 'paid_at': response_data.get('paid_at'),
@@ -296,35 +296,35 @@ class ZentraPayAPI:
 
     def _parse_payment_response(self, response_data: Dict[str, Any], original_amount: float) -> ZentraPayResponse:
         """
-        Processar resposta da criação de transação ZentraPay
+        Processar resposta da criação de transação ZentraPay conforme documentação oficial
         """
-        # Extrair dados conforme documentação ZentraPay
-        payment_data = response_data.get("data", response_data)
-        pix_data = payment_data.get("pix", {})
-
-        transaction_id = payment_data.get("id", payment_data.get("transaction_id", ""))
+        # Extrair dados conforme estrutura da documentação
+        payment_id = response_data.get("id", "")
+        amount = response_data.get("amount", original_amount)
+        status = response_data.get("status", "pending")
+        expires_at = response_data.get("expires_at", "")
+        
+        # Extrair dados PIX da resposta
+        pix_data = response_data.get("pix", {})
         pix_code = (
             pix_data.get("qr_code", "") or 
-            pix_data.get("pix_code", "") or 
+            pix_data.get("emv", "") or
             pix_data.get("code", "") or
-            payment_data.get("qr_code", "") or
-            payment_data.get("pix_code", "")
+            response_data.get("qr_code", "") or
+            response_data.get("pix_code", "")
         )
-        status = payment_data.get("status", "pending")
-        amount = payment_data.get("amount", original_amount)
-        expires_at = payment_data.get("expires_at", pix_data.get("expires_at", ""))
 
-        logger.info(f"[ZentraPay] Transaction ID: {transaction_id}")
+        logger.info(f"[ZentraPay] Payment ID: {payment_id}")
         logger.info(f"[ZentraPay] PIX Code length: {len(pix_code) if pix_code else 0}")
-        logger.info(f"[ZentraPay] PIX Code preview: {pix_code[:50]}...")
+        logger.info(f"[ZentraPay] PIX Code preview: {pix_code[:50]}..." if pix_code else "[ZentraPay] PIX Code is empty")
         logger.info(f"[ZentraPay] Status: {status}")
         logger.info(f"[ZentraPay] Amount: R$ {amount:.2f}")
         logger.info(f"[ZentraPay] Expires: {expires_at}")
 
         # Validar campos obrigatórios
-        if not transaction_id:
-            logger.error("[ZentraPay] Transaction ID is empty!")
-            raise ValueError("ZentraPay não retornou transaction_id válido")
+        if not payment_id:
+            logger.error("[ZentraPay] Payment ID is empty!")
+            raise ValueError("ZentraPay não retornou payment ID válido")
 
         if not pix_code:
             logger.error("[ZentraPay] PIX Code is empty!")
@@ -334,7 +334,7 @@ class ZentraPayAPI:
         pix_qr_code = self._generate_qr_code_base64(pix_code) if pix_code else ""
 
         response = ZentraPayResponse(
-            transaction_id=transaction_id,
+            transaction_id=payment_id,
             pix_code=pix_code,
             pix_qr_code=pix_qr_code,
             status=status,
@@ -400,7 +400,7 @@ def health_check() -> Dict[str, Any]:
     try:
         api = ZentraPayAPI()
         # Fazer uma requisição simples para testar conectividade
-        response = requests.get(f"{api.API_URL}/api/v1/health", timeout=10)
+        response = requests.get(f"{api.API_URL}/v1/health", timeout=10)
         
         return {
             'status': 'healthy' if response.status_code == 200 else 'unhealthy',
