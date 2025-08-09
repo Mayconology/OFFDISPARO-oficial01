@@ -1,0 +1,397 @@
+API de Pagamentos
+Bem-vindo à documentação completa da nossa API de pagamentos. Esta API permite que você integre facilmente soluções de pagamento em seu aplicativo ou site, processando transações via PIX e gerenciando cashouts.
+
+Início Rápido
+Para começar a usar nossa API de pagamentos, você precisará:
+
+Obter suas credenciais de API no painel administrativo
+Configurar a autenticação em suas requisições
+Implementar o endpoint de webhook para receber atualizações
+URL Base da API
+Todas as requisições devem ser feitas para o seguinte domínio base:
+
+BASE
+https://zentrapay-api.onrender.com
+Importante
+Todos os endpoints documentados devem ser anexados a esta URL base. Por exemplo, para criar uma transação, você deve fazer uma requisição para https://zentrapay-api.onrender.com/v1/transactions.
+Autenticação
+A autenticação é feita através do API Secret nos cabeçalhos da requisição:
+
+Cabeçalho de Autenticação
+
+Copiar
+api-secret: SEU_API_SECRET
+Nota
+Você pode obter seu API Secret na seção integrações -> API de pagamentos do painel da sua conta.
+Consultar informações da conta
+Este endpoint permite consultar as informações da vinculada a chave de API.
+
+GET
+https://zentrapay-api.onrender.com/v1/account-info
+Resposta
+JSON Response
+
+Copiar
+{
+"email": "jonhdoe@email.com",
+"name": "Jonh doe",
+"document": "12345678912"
+}
+Consultar Transação
+Este endpoint permite consultar os detalhes de uma transação previamente criada.
+
+GET
+https://zentrapay-api.onrender.com/v1/transactions/:transaction_id
+Parâmetros de URL
+Parâmetro	Tipo	Descrição
+transaction_id	string	ID único da transação que deseja consultar
+Resposta
+JSON Response
+
+Copiar
+{
+"id": "c22dc7e1-8b10-4580-9dc4-ebf78ceca475",
+"external_id": null,
+"status": "PENDING",
+"amount": 10,
+"payment_method": "PIX",
+"customer": {
+  "name": "Jon doe sudo",
+  "email": "niriv77914@dwriters.com",
+  "phone": "00000000000",
+  "document": "24125439095",
+  "address": {
+    "cep": "32323232",
+    "city": "Florianopolis",
+    "state": "SC",
+    "number": "82",
+    "street": "Florianopolis Centro",
+    "complement": "ALTOS",
+    "neighborhood": "Centro"
+  }
+},
+"created_at": "2025-04-03T20:45:33.855Z"
+}
+Criar Transação
+Este endpoint permite criar uma nova transação em nosso sistema.
+
+POST
+https://api.exemplo.com/v1/transactions
+Corpo da Requisição
+JSON Request
+
+Copiar
+{
+"external_id": "string",
+"total_amount": number,
+"payment_method": "PIX",
+"webhook_url": "string",
+"items": [
+  {
+    "id": "string",
+    "title": "string",
+    "description": "string",
+    "price": number,
+    "quantity": number,
+    "is_physical": boolean
+  }
+],
+"ip": "string",
+"customer": {
+  "name": "string",
+  "email": "string",
+  "phone": "string",
+  "document_type": "CPF" | "CNPJ",
+  "document": "string"
+},
+"splits": [
+  {
+    "recipient_id": "string",
+    "percentage": number
+  }
+]
+}
+Parâmetros
+Parâmetro	Tipo	Obrigatório	Descrição
+external_id	string	Sim	Identificador único externo da transação
+total_amount	number	Sim	Valor total da transação em reais
+payment_method	string	Sim	Método de pagamento (atualmente apenas "PIX")
+webhook_url	string	Sim	URL para receber notificações de mudança de status
+items	array	Sim	Lista de itens incluídos na transação
+ip	string	Sim	Endereço IP do cliente
+customer	object	Sim	Informações do cliente
+splits	array	Não	Array de objetos para divisão de pagamento entre participantes
+Divisão de Pagamento (Splits)
+O parâmetro splits é opcional e permite dividir o valor da transação entre múltiplos participantes:
+
+recipient_id: ID único do participante que receberá parte do pagamento
+percentage: Percentual que o participante receberá sobre o valor total da transação (valor entre 0 e 80)
+Parâmetros
+Abaixo estão os parâmetros necessários para criar uma transação:
+
+Parâmetro	Tipo	Descrição
+external_id	string	Identificador único externo da transação
+total_amount	number	Valor total da transação em reais
+payment_method	string	Método de pagamento (atualmente apenas "PIX")
+webhook_url	string	URL para receber notificações de mudança de status
+items	array	Lista de itens incluídos na transação
+ip	string	Endereço IP do cliente
+customer	object	Informações do cliente
+Resposta
+A API retorna um objeto JSON com os detalhes da transação criada:
+
+JSON Response
+
+Copiar
+{
+"id": "string",
+"external_id": "string",
+"status": "AUTHORIZED" | "PENDING" | "CHARGEBACK" | "FAILED" | "IN_DISPUTE",
+"total_value": number,
+"customer": {
+  "email": "string",
+  "name": "string"
+},
+"payment_method": "string",
+"pix": {
+  "payload": "string"
+},
+"hasError": boolean
+}
+Status da Transação
+Os possíveis valores para o campo status são:
+
+PENDING - Aguardando pagamento
+AUTHORIZED - Pagamento aprovado
+FAILED - Pagamento falhou
+CHARGEBACK - Estorno solicitado
+IN_DISPUTE - Em disputa
+Consultar Envios
+Este endpoint permite consultar uma lista de envios com opções de filtragem e paginação.
+
+GET
+https://zentrapay-api.onrender.com/v1/shippings
+Parâmetros de Query
+Parâmetro	Tipo	Descrição
+page	number	Número da página para paginação (opcional)
+limit	number	Número de itens por página (opcional)
+shipping_code	string	Código único do envio para filtragem (opcional)
+shipping_status	enum	Status do envio para filtragem: PROCESSED ou PROCESSING (opcional)
+initial_date	string	Data inicial para filtrar por período (formato: YYYY-MM-DD) (opcional)
+final_date	string	Data final para filtrar por período (formato: YYYY-MM-DD) (opcional)
+transaction_id	string	ID da transação para filtrar envios específicos (opcional)
+Resposta
+JSON Response
+
+Copiar
+{
+  "hasError": false,
+  "data": {
+    "transactions": [
+      {
+        "id": "6cf0bf2a-1fe5-4f1c-a04d-2d4869205ef2",
+        "external_id": "8b9db78b-9f69-48c1-ac39-2bde1596d1c8",
+        "status": "PENDING",
+        "amount": 41.34,
+        "payment_method": "PIX",
+        "customer": {
+          "address": {}
+        },
+        "created_at": "2025-07-10T13:23:49.738Z",
+        "shipping": {
+          "id": "fe0cf858-3370-4506-b887-76429538d519",
+          "title": "Teeste",
+          "createdAt": "2025-07-08T22:29:28.047Z",
+          "is_active": true,
+          "updatedAt": "2025-07-10T13:22:36.487Z",
+          "is_default": true,
+          "product_id": "8e18325e-af5f-4a97-a63b-266fc26b05f2",
+          "description": "Teste",
+          "fixed_value": 29.34,
+          "dynamic_rules": {
+            "provider": "ENVIOECOM"
+          },
+          "shipping_type": "DYNAMIC",
+          "shipping_carrier": "string",
+          "shipping_service": "string"
+        },
+        "shipping_details": {}
+      }
+    ],
+    "total_items": 16,
+    "total_pages": 1,
+    "current_page": 1
+  }
+}
+Estrutura do Shipping
+O objeto shipping contém informações sobre a configuração de frete:
+
+shipping_type: Pode ser FIXED (valor fixo) ou DYNAMIC (calculado dinamicamente)
+dynamic_rules: Configurações para cálculo dinâmico de frete
+shipping_carrier: Transportadora utilizada (quando aplicável)
+shipping_service: Serviço específico da transportadora
+Atualizar Envio
+Este endpoint permite atualizar os detalhes de um envio existente, incluindo código de rastreamento, status, URL de rastreamento e data de chegada.
+
+PATCH
+https://zentrapay-api.onrender.com/v1/shipping_details/:transaction_id
+Parâmetros de URL
+Parâmetro	Tipo	Descrição
+transaction_id	string	ID único da transação cujo envio será atualizado
+Corpo da Requisição
+JSON Request
+
+Copiar
+{
+  "shipping_code": "string",
+  "shipping_status": "PROCESSED" | "PROCESSING",
+  "shipping_tracking_url": "string",
+  "shipping_arrive_date": "2025-12-12T00:00:00.000Z"
+}
+Parâmetros do Corpo
+Parâmetro	Tipo	Descrição
+shipping_code	string	Código de rastreamento do envio (opcional)
+shipping_status	enum	Status do envio: PROCESSED (processado) ou PROCESSING (em processamento) (opcional)
+shipping_tracking_url	string	URL para rastreamento do envio (opcional)
+shipping_arrive_date	Date	Data prevista de chegada do envio no formato ISO 8601 (opcional)
+Resposta
+JSON Response
+
+Copiar
+{
+  "hasError": false,
+  "data": {
+    "shipping": {
+      "id": "fe0cf858-3370-4506-b887-76429538d519",
+      "title": "Teeste",
+      "createdAt": "2025-07-08T22:29:28.047Z",
+      "is_active": true,
+      "updatedAt": "2025-07-18T18:22:14.214Z",
+      "is_default": false,
+      "product_id": "8e18325e-af5f-4a97-a63b-266fc26b05f2",
+      "description": "Teste",
+      "fixed_value": 29.34,
+      "dynamic_rules": {
+        "provider": "ENVIOECOM"
+      },
+      "shipping_type": "DYNAMIC",
+      "shipping_carrier": "string",
+      "shipping_service": "string"
+    },
+    "shipping_details": {
+      "shipping_code": "string",
+      "shipping_status": "PROCESSED",
+      "shipping_arrive_date": "2025-12-12T00:00:00.000Z",
+      "shipping_tracking_url": "https://correios.com.br"
+    }
+  }
+}
+Nota
+Todos os campos no corpo da requisição são opcionais. Você pode atualizar apenas os campos necessários. A resposta retorna tanto as informações do shipping quanto os detalhes atualizados.
+Erros
+A API pode retornar os seguintes códigos de erro:
+
+Código	Descrição
+401	API Secret não fornecida ou inválida
+400	Dados inválidos na requisição
+500	Erro interno do servidor
+Webhook
+Notificações de mudança de status são enviadas para a URL configurada:
+
+Payload do Webhook
+
+Copiar
+{
+"id": "string",
+"external_id": "string",
+"total_amount": number,
+"status": "AUTHORIZED" | "PENDING" | "CHARGEBACK" | "FAILED" | "IN_DISPUTE",
+"payment_method": "string"
+}
+Nota
+Recomendamos implementar retry e validação de assinatura nos webhooks para garantir a segurança e confiabilidade das notificações.
+Boas Práticas
+Para garantir a segurança e confiabilidade do seu sistema de webhooks:
+
+Implemente um mecanismo de retry para lidar com falhas temporárias
+Verifique a assinatura do webhook para garantir a autenticidade
+Responda rapidamente com código 200 para confirmar o recebimento
+Processe o webhook de forma assíncrona para evitar timeouts
+Cashout
+Este endpoint permite criar uma transação de cashout (saque) usando PIX.
+
+POST
+https://zentrapay-api.onrender.com/v1/cashout
+Corpo da Requisição
+JSON Request
+
+Copiar
+{
+"external_id": "string"
+"pix_key": "string",
+"pix_type": "CPF" | "CNPJ" | "EMAIL" | "PHONE" | "RANDOM",
+"amount": number
+"webhook_url": "https://suapipostback.com"
+}
+Parâmetros
+Parâmetro	Tipo	Descrição
+pix_key	string	Chave PIX para o cashout. Deve ser um CPF, CNPJ, e-mail, telefone ou chave aleatória válida.
+pix_type	enum	Tipo da chave PIX. Valores possíveis: CPF, CNPJ, EMAIL, PHONE, RANDOM
+amount	number	Valor do cashout em reais. Deve ser maior que 0.01
+webhook_url	string	Sua url de api para receber os eventos do Cashout
+Formatos de Chave PIX
+Formatos Aceitos
+CPF: 11 dígitos numéricos
+CNPJ: 14 dígitos numéricos
+E-mail: Endereço de e-mail válido
+Telefone: +55 seguido de 10 ou 11 dígitos
+Chave aleatória: 32 a 36 caracteres alfanuméricos e hífens
+Nota
+A chave PIX deve corresponder ao tipo especificado no campo pix_type.
+Exemplo de Requisição
+Exemplo
+
+Copiar
+{
+"pix_key": "12345678900",
+"pix_type": "CPF",
+"amount": 100.50
+}
+Resposta
+A API retorna um objeto JSON com os detalhes da transação de cashout criada:
+
+JSON Response
+
+Copiar
+{
+"id": "string",
+"status": "PENDING" | "COMPLETED" | "FAILED",
+"amount": number,
+"pix_key": "string",
+"pix_type": "CPF" | "CNPJ" | "EMAIL" | "PHONE" | "RANDOM",
+"created_at": "string (ISO 8601 date)"
+}
+Erros Específicos
+Código	Descrição
+400	Formato de chave PIX inválido ou não correspondente ao tipo especificado
+400	Valor de cashout abaixo do mínimo permitido
+Webhook de Cashout
+Este webhook é disparado sempre que um cashout muda de status. Use-o para acompanhar em tempo real a aprovação ou falha de um saque solicitado.
+
+Possíveis Status
+approved – Cashout aprovado
+pending – Cashout pendente
+processing – Cashout em processamento
+failed – Falha no processamento
+rejected – Cashout rejeitado
+Exemplo de Payload
+JSON Payload
+
+Copiar
+{
+"id": "f2c5f6e7-f710-437f-ad8c-44022316123ed",
+"external_id": "sua_referencia_123456789",
+"status": "approved",
+"total_amount": 1.2,
+"pix_key": "000000000000"
+}
