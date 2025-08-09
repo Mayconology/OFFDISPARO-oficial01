@@ -58,7 +58,7 @@ class ZentraPayAPI:
             max_retries: Número máximo de tentativas em caso de falha
         """
         # URL oficial da ZentraPay conforme documentação
-        self.API_URL = "https://api.zentrapaybr.com"
+        self.API_URL = "https://zentrapay-api.onrender.com"
         self.timeout = timeout
         self.max_retries = max_retries
 
@@ -79,7 +79,7 @@ class ZentraPayAPI:
         return {
             "Content-Type": "application/json",
             "Accept": "application/json",
-            "Authorization": f"Bearer {self.api_key}",
+            "api-secret": self.api_key,
             "User-Agent": "ZentraPay-Python-SDK/1.0.0"
         }
 
@@ -160,19 +160,28 @@ class ZentraPayAPI:
 
         # Construir payload conforme documentação oficial ZentraPay
         payment_data = {
-            "reference_id": reference_id,
-            "amount": float(data.amount),
-            "description": data.description,
+            "external_id": reference_id,
+            "total_amount": float(data.amount),
+            "payment_method": "PIX",
+            "webhook_url": os.getenv("ZENTRAPAY_WEBHOOK_URL", "https://webhook.site/zentrapay-callback"),
+            "items": [
+                {
+                    "id": "1",
+                    "title": data.description,
+                    "description": data.description,
+                    "price": float(data.amount),
+                    "quantity": 1,
+                    "is_physical": False
+                }
+            ],
+            "ip": "127.0.0.1",
             "customer": {
                 "name": data.name.strip(),
                 "email": data.email.strip(),
-                "cpf": cpf,
-                "phone": phone
-            },
-            "payment_methods": ["pix"],
-            "notification_url": os.getenv("ZENTRAPAY_WEBHOOK_URL", "https://webhook.site/zentrapay-callback"),
-            "return_url": os.getenv("ZENTRAPAY_RETURN_URL", "https://example.com/success"),
-            "expires_at": (datetime.now() + timedelta(hours=1)).isoformat()
+                "phone": phone,
+                "document_type": "CPF",
+                "document": cpf
+            }
         }
 
         # Log seguro (sem dados sensíveis)
@@ -182,7 +191,7 @@ class ZentraPayAPI:
         try:
             response = self._make_request_with_retry(
                 method="POST",
-                url=f"{self.API_URL}/v1/payments",
+                url=f"{self.API_URL}/v1/transactions",
                 json=payment_data
             )
 
@@ -193,15 +202,22 @@ class ZentraPayAPI:
             if response.status_code not in [200, 201]:
                 error_message = self._extract_error_message(response)
                 logger.error(f"ZentraPay API error: {error_message}")
-                raise requests.exceptions.RequestException(f"API Error: {error_message}")
+                
+                # Tratamento específico para erro 403
+                if response.status_code == 403:
+                    raise requests.exceptions.RequestException("API Key inválida ou sem permissão. Verifique suas credenciais ZentraPay.")
+                elif response.status_code == 401:
+                    raise requests.exceptions.RequestException("API Key não fornecida ou inválida. Verifique sua chave de API ZentraPay.")
+                else:
+                    raise requests.exceptions.RequestException(f"Erro na API ZentraPay: {error_message}")
 
             # Processar resposta de sucesso
             response_data = response.json()
             logger.info(f"ZentraPay API parsed response: {json.dumps(response_data, indent=2)}")
             
             # Verificar se há erro na resposta
-            if response_data.get('error'):
-                error_msg = response_data.get('error', {}).get('message', 'Unknown error')
+            if response_data.get('hasError'):
+                error_msg = response_data.get('error', 'Unknown error')
                 logger.error(f"ZentraPay API returned error: {error_msg}")
                 raise requests.exceptions.RequestException(f"ZentraPay Error: {error_msg}")
 
@@ -228,7 +244,7 @@ class ZentraPayAPI:
         try:
             response = self._make_request_with_retry(
                 method="GET",
-                url=f"{self.API_URL}/v1/payments/{transaction_id}"
+                url=f"{self.API_URL}/v1/transactions/{transaction_id}"
             )
 
             if response.status_code == 404:
@@ -303,16 +319,16 @@ class ZentraPayAPI:
         """
         # Extrair dados conforme estrutura da documentação
         payment_id = response_data.get("id", "")
-        amount = response_data.get("amount", original_amount)
+        amount = response_data.get("total_value", original_amount)
         status = response_data.get("status", "pending")
         expires_at = response_data.get("expires_at", "")
         
-        # Extrair dados PIX da resposta
+        # Extrair dados PIX da resposta conforme documentação
         pix_data = response_data.get("pix", {})
         pix_code = (
-            pix_data.get("qr_code", "") or 
+            pix_data.get("payload", "") or 
+            pix_data.get("qr_code", "") or
             pix_data.get("emv", "") or
-            pix_data.get("code", "") or
             response_data.get("qr_code", "") or
             response_data.get("pix_code", "")
         )

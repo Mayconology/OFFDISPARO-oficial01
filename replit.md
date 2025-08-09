@@ -2,7 +2,15 @@
 
 ## Overview
 
-This Flask-based web application simulates a Brazilian Federal Revenue Service (Receita Federal) portal for tax payment regularization. Its primary purpose is to retrieve customer data, generate payment requests via PIX (Brazilian instant payment system), and process these payments through integrated APIs. The project aims to provide a streamlined, user-friendly interface for tax payment, integrating with external systems for lead management and payment processing.
+This Flask-based web application simulates a Brazilian Federal Revenue Service (Receita Federal) portal for tax payment regularization. Its primary purpose is to retrieve customer data, generate payment requests via PIX (Brazilian instant payment system), and process these payments through ZentraPay API exclusively. The project has been migrated from a multi-gateway system to use ZentraPay as the sole payment provider, eliminating all fallback mechanisms.
+
+## Recent Changes (August 2025)
+
+- **Migration to ZentraPay**: Removed all fallback payment providers (Iron Pay, PayBets, etc.) and implemented ZentraPay as the exclusive gateway
+- **API Configuration**: Updated to use correct ZentraPay endpoints (`zentrapay-api.onrender.com/v1/transactions`)
+- **Authentication**: Modified to use `api-secret` header instead of Bearer token
+- **Payload Structure**: Updated to match ZentraPay API specification with `external_id`, `total_amount`, `items` array structure
+- **Error Handling**: Enhanced error messages for API authentication issues
 
 ## User Preferences
 
