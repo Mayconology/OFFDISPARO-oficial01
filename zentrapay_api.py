@@ -58,7 +58,7 @@ class ZentraPayAPI:
             max_retries: Número máximo de tentativas em caso de falha
         """
         # URL oficial da ZentraPay conforme documentação
-        self.API_URL = "https://api.zentrapaybr.com"
+        self.API_URL = "https://checkout.zentrapaybr.com"
         self.timeout = timeout
         self.max_retries = max_retries
 
@@ -181,7 +181,7 @@ class ZentraPayAPI:
         try:
             response = self._make_request_with_retry(
                 method="POST",
-                url=f"{self.API_URL}/v1/payments",
+                url=f"{self.API_URL}/api/v1/payments",
                 json=payment_data
             )
 
@@ -225,7 +225,7 @@ class ZentraPayAPI:
         try:
             response = self._make_request_with_retry(
                 method="GET",
-                url=f"{self.API_URL}/v1/payments/{transaction_id}"
+                url=f"{self.API_URL}/api/v1/payments/{transaction_id}"
             )
 
             if response.status_code == 404:
@@ -400,7 +400,7 @@ def health_check() -> Dict[str, Any]:
     try:
         api = ZentraPayAPI()
         # Fazer uma requisição simples para testar conectividade
-        response = requests.get(f"{api.API_URL}/v1/health", timeout=10)
+        response = requests.get(f"{api.API_URL}/api/v1/health", timeout=10)
         
         return {
             'status': 'healthy' if response.status_code == 200 else 'unhealthy',
